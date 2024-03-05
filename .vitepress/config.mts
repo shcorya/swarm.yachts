@@ -4,7 +4,12 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "Swarm.Yachts",
   description: "The Ultimate Guide to Docker Swarm",
-  head: [['link', { rel: 'icon', href: '/artwork/favicon.ico' }]],
+  head: [
+    [
+      'link', { rel: 'icon', href: '/artwork/favicon.ico' }
+    ]
+  ],
+  lastUpdated: true,
   themeConfig: {
     logo: '/artwork/logo.svg',
     editLink: {
@@ -62,7 +67,7 @@ export default defineConfig({
     },
 
     footer: {
-      message: 'A compilation of resources maintained by <a href=https://corya.me>Steve Corya</a> | Released under the CC0 1.0 Universal License'
+      message: 'A compilation of resources maintained by <a href=https://corya.me>Steve Corya</a> | Released under the CC0 1.0 Universal License | Created with <a href=https://vitepress.dev>VitePress</a>'
     }
   }
 })

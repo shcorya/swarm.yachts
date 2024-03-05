@@ -126,3 +126,12 @@ networks:
     driver_opts:
       encrypted: "true"
 ```
+
+## Basic Authentication
+
+Basic access authentication can be enabled for a site, configurable by labels. Caddy uses `bcrypt` encryption, optionally encoded with `base64`. Authontication hashes can safely be stored in service labels.
+
+To generate a basic auntentication string:
+```bash
+echo $(caddy hash-password | base64 -w 0)
+```

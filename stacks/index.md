@@ -6,6 +6,8 @@ While the specifications for the files for Docker Compose and Docker Stacks are 
 
 It should be noted that stacks are simply collections of services. That is, each option which can be set for a standalone service can be set for a service which forms part of a stack. The [docker service create](https://docs.docker.com/reference/cli/docker/service/create/) reference describes a multitude of options available for stack/service creation.
 
+## Labels
+
 ## Configs
 
 ## Networks
