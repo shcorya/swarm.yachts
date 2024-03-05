@@ -12,7 +12,7 @@ hero:
     - theme: alt
       text: Stacks
       link: /stacks/
-  image: https://raw.githubusercontent.com/docker-library/docs/471fa6e4cb58062ccbf91afc111980f9c7004981/swarm/logo.png
+  image: {light: /yacht-light-mode.svg, dark: /yacht-dark-mode.svg }
 
 features:
   - title: Administration

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+
+<svg
+   fill="#000000"
+   width="800px"
+   height="800px"
+   viewBox="0 0 32 32"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="cerulean-anchor.svg"
+   inkscape:version="1.3.2 (091e20ef0f, 2023-11-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.99"
+     inkscape:cx="400"
+     inkscape:cy="400"
+     inkscape:window-width="1920"
+     inkscape:window-height="1006"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1" />
+  <title
+     id="title1">anchor</title>
+  <path
+     d="m 32,19.456779 -1.346421,8.636643 -2.724841,-2.491876 c -2.158302,1.719729 -6.160821,4.059634 -11.975554,4.059634 -5.849106,0 -9.894293,-2.282916 -12.046669,-3.918838 L 1.4199045,28.016319 0,19.457897 9.3550131,20.756355 6.7771398,23.115257 c 1.8086596,1.266051 4.6460982,2.792465 7.4716832,2.792465 l -0.0083,-14.089716 c -2.063485,-0.677164 -3.548576,-2.4661749 -3.548576,-4.5870632 0,-2.7019537 2.392977,-4.8921228 5.345382,-4.8921228 2.951221,0 5.345384,2.1901691 5.345384,4.8921228 0,2.1532938 -1.531316,3.9613012 -3.643394,4.6138822 0.01303,2.748886 0.06044,14.115417 -0.0047,14.115417 2.702322,0 5.492351,-1.658272 7.309307,-2.999191 L 22.635504,20.756355 Z M 18.792992,7.151605 c 0,-1.3923218 -1.233823,-2.5220468 -2.755658,-2.5220468 -1.521833,0 -2.756842,1.129725 -2.756842,2.5220468 0,1.3934393 1.235009,2.5231643 2.756842,2.5231643 1.521835,0 2.755658,-1.129725 2.755658,-2.5231643 z"
+     id="path1"
+     style="stroke-width:1.15083;fill:#0db7ed;fill-opacity:1" />
+  <metadata
+     id="metadata1">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:title>anchor</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+</svg>
