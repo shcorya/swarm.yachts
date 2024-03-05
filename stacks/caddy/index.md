@@ -1,3 +1,5 @@
+*This stack depends on RedisRaft.*
+
 # Caddy
 
 Caddy is an open-source web server that supports automatic, signed SSL/TLS certificate fetching. It can be administered while running allowing for near-zero downtime configuration changes. It can be used as a reverse proxy for Docker Swarm.

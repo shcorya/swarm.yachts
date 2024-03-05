@@ -7,6 +7,20 @@ export default defineConfig({
   head: [
     [
       'link', { rel: 'icon', href: '/artwork/favicon.ico' }
+    ],
+    [
+      'script', {},
+      `var _paq = window._paq = window._paq || [];
+      /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
+      _paq.push(['trackPageView']);
+      _paq.push(['enableLinkTracking']);
+      (function() {
+      var u="//matomo.corya.net/";
+      _paq.push(['setTrackerUrl', u+'matomo.php']);
+      _paq.push(['setSiteId', '2']);
+      var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+      g.async=true; g.src=u+'matomo.js'; s.parentNode.insertBefore(g,s);
+      })();`
     ]
   ],
   lastUpdated: true,
@@ -68,6 +82,8 @@ export default defineConfig({
 
     footer: {
       message: 'A compilation of resources maintained by <a href=https://corya.me>Steve Corya</a> | Released under the CC0 1.0 Universal License | Created with <a href=https://vitepress.dev>VitePress</a>'
-    }
+    },
+
+    srcExclude: ['**/README.md']
   }
 })
