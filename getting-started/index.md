@@ -13,7 +13,7 @@ This guide assumes that the reader has basic knowledge of the command line, inst
 ## Provisioning
 At least six servers (three managers and three workers) are required to deploy docker swarm effectively. Root access on each of the servers is required. The servers will cost from $100 to $400 per year depending on which provider you choose. RackNerd is recommended. One can get started with RackNerd for $100, which will be charged on an annual basis.
 
-Recommended specs for [manager nodes](https://my.racknerd.com/cart.php?a=confproduct&i=1):
+Recommended minimum specifications for [manager nodes](https://my.racknerd.com/cart.php?a=confproduct&i=1):
 - 1 vCPU
 - 10 GB SSD storage
 - 768 MB RAM

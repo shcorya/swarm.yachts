@@ -3,7 +3,7 @@
 layout: home
 
 hero:
-  name: "dockerswarm.net"
+  name: "Swarm.Yachts"
   text: "The Ultimate Guide to Docker Swarm"
   actions:
     - theme: brand
@@ -12,7 +12,7 @@ hero:
     - theme: alt
       text: Stacks
       link: /stacks/
-  image: {light: /yacht-light-mode.svg, dark: /yacht-dark-mode.svg }
+  image: {light: /artwork/yacht-light-mode.svg, dark: /artwork/yacht-dark-mode.svg }
 
 features:
   - title: Administration

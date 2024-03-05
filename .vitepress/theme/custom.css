@@ -1,6 +1,11 @@
+/* docker cerulean #0db7ed */
+/* docker official blue #3c19f0 */
+
 :root {
-  --vp-c-brand-1: #3f95d9;
+  /* --vp-c-brand-1: #3f95d9;
+  --vp-c-brand-2: #0062c3; */
+  --vp-c-brand-1: #0db7ed;
   --vp-c-brand-2: #0062c3;
   --vp-button-brand-bg: var(--vp-c-brand-2);
-  --vp-button-brand-hover-bg: var(--vp-c-brand-1);
+  --vp-button-brand-hover-bg: #006fd6;
 }

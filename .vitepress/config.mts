@@ -2,10 +2,14 @@ import { defineConfig } from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "dockerswarm.net",
+  title: "Swarm.Yachts",
   description: "The Ultimate Guide to Docker Swarm",
-  head: [['link', { rel: 'icon', href: '/favicon.ico' }]],
+  head: [['link', { rel: 'icon', href: '/artwork/favicon.ico' }]],
   themeConfig: {
+    logo: '/artwork/logo.svg',
+    editLink: {
+      pattern: 'https://github.com/shcorya/swarm.yachts/edit/master/:path'
+    },
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: 'Home', link: '/' },
@@ -19,13 +23,18 @@ export default defineConfig({
       // is on `guide` directory.
       '/stacks/': [
         {
-          text: 'Guide',
+          text: 'Stacks',
           items: [
             { text: 'RedisRaft', link: '/stacks/redisraft/', items:[
-              {text: "Compose", link: '/stacks/redisraft/#compose'}
+              // {text: "Compose", link: '/stacks/redisraft/#compose'}
+            ]},
+            { text: 'Caddy', link: '/stacks/caddy/', items:[
             ]},
             { text: 'etcd', link: '/stacks/etcd/', items:[
-              {text: "Compose", link: '/stacks/etcd/#compose'}
+            ]},
+            { text: 'Patroni', link: '/stacks/patroni/', items:[
+            ]},
+            { text: 'Garage', link: '/stacks/garage/', items:[
             ]},
           ]
         }
@@ -34,23 +43,26 @@ export default defineConfig({
       // This sidebar gets displayed when a user
       // is on `config` directory.
       '/getting-started/': [
-        {
-          text: 'Config',
-          items: [
-            { text: 'Blah', link: '/config/' },
-            { text: 'Blah', link: '/config/three' },
-            { text: 'Blah', link: '/config/four' }
-          ]
-        }
+        // {
+        //   text: 'Getting Started',
+        //   items: [
+        //     { text: 'Provisioning', link: '/getting-started/#provisioning' },
+        //     { text: 'Installation', link: '/getting-started/#installation' },
+        //   ]
+        // }
       ]
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/vuejs/vitepress' }
+      { icon: 'github', link: 'https://github.com/shcorya/swarm.yachts' }
     ],
 
     search: {
       provider: 'local'
+    },
+
+    footer: {
+      message: 'A compilation of resources maintained by <a href=https://corya.me>Steve Corya</a> | Released under the CC0 1.0 Universal License'
     }
   }
 })
