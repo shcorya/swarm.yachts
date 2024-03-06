@@ -4,9 +4,11 @@
 
 [Patroni](https://patroni.readthedocs.io/en/latest/index.html) is a "template" for installing PostgreSQL databases in a high-availability situation. It uses a data store, such as etcd or Consul, to track the state of a Patroni cluster.
 
+Being a highly configurable system, Patroni and its related services require a comprably high amount of configuration. Many of these options can (and should) be stored as swarm configs. Some configuration values will also be set by environmental variables.
+
 ## Setup
 
-Being a highly configurable system, Patroni and its related services require a comprably high amount of configuration. Many of these options can (and should) be stored as Swarm configs. Some configuration values will also be set by environmental variables.
+To start the deployment of a Patroni cluster, it is prudent to label the swarm nodes which will be used to store the data of the database.
 
 ### Configuration
 The main configuration file is `patroni.yml`. This file contains the initial cluster configuration (also called the Distributed Communication Store,) for the purpose of bootstrapping (among other things.) Extensive documentation can be found [here](https://patroni.readthedocs.io/en/latest/dynamic_configuration.html).

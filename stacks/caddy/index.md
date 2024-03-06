@@ -49,7 +49,7 @@ services:
       mode: global
       placement:
         constraints:
-          - "node.labels.enterprises.corya.ingress==true"
+          - "node.labels.enterprises.corya.ingress == true"
       labels:
         caddy_controlled_server:
 
@@ -68,7 +68,7 @@ services:
     deploy:
       placement:
         constraints:
-          - "node.role==worker"
+          - "node.role == worker"
       labels:
         caddy.email: stephen@corya.net
         caddy.log: default
@@ -76,6 +76,8 @@ services:
         caddy.log.format: console
         caddy.storage: redis
         caddy.storage.redis.host: redisraft
+        caddy.order: "cache before rewrite"
+        caddy.cache.allowed_http_verbs: "GET HEAD"
 
   whoami2:
     image: traefik/whoami

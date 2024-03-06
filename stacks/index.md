@@ -1,3 +1,9 @@
+---
+prev:
+  text: 'Getting Started'
+  link: '/getting-started/'
+---
+
 # Docker Swarm Stacks
 
 Docker stacks use configurations similar to Docker Compose. In fact, both share the same configuration file, called a compose file. The compose file reference can be found at the [compose file reference](https://docs.docker.com/compose/compose-file/compose-file-v3/).
