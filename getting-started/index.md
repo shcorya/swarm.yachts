@@ -28,7 +28,7 @@ Note: managers can also be workers, although this is not recommended for product
 
 Install Linux on each of the VPS's. This guide assumes Debian has been installed.
 
-## Settingsn DNS records
+## Setting DNS records
 Create a DNS A record for each of your new machines. Then, set another A record which is the same domain name pointing to the three worker nodes. For example, if your worker IP's are `1.2.3.4`, `3.4.5.6`, and `5.6.7.8`, create the following A records:
 ```
 swarm.example.com. 300  IN      A       1.2.4.5
