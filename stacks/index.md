@@ -12,12 +12,15 @@ While the specifications for the files for Docker Compose and Docker Stacks are 
 
 It should be noted that stacks are simply collections of services. That is, each option which can be set for a standalone service can be set for a service which forms part of a stack. The [docker service create](https://docs.docker.com/reference/cli/docker/service/create/) reference describes a multitude of options available for stack/service creation.
 
+Many of the stacks in this guide will be dependent on other stacks. This has been noted at the top of each stack's reference page.
+
 ## Labels
+Both services and nodes can be assigned labels. This guide will utilize node labels in order to place services on appropriate VPS's.
 
 ## Configs
 
-## Networks
-
 ## Secrets
+
+## Networks
 
 ## Volumes

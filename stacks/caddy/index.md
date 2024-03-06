@@ -8,6 +8,40 @@ Leveraging work from [Lucas Lorentz](https://github.com/lucaslorentz) and his [C
 
 Caddy does not natively support high-availabiliy data storage, thus, in order to use it in a high-availability mode we must use a plugin. GitHub user [Gamalan](https://github.com/gamalan) has published a [plugin](https://github.com/gamalan/caddy-tlsredis) for storing Caddy certificates in a Redis database. Leveraging RedisRaft for high-availability, one can set up a reverse proxy for Docker Swarm with automatic certificate provisioning without a single point of failure.
 
+## Configuration
+To enable CORS, create a new Caddyfile at `/tmp/Caddyfile`:
+```
+(cors) {
+        @cors_preflight{args.0} method OPTIONS
+        @cors{args.0} header Origin {args.0}
+
+        handle @cors_preflight{args.0} {
+                header {
+                        Access-Control-Allow-Origin "{args.0}"
+                        Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+                        Access-Control-Allow-Headers *
+                        Access-Control-Max-Age "3600"
+                        defer
+                }
+                respond "" 204
+        }
+
+        handle @cors{args.0} {
+                header {
+                        Access-Control-Allow-Origin "{args.0}"
+                        Access-Control-Expose-Headers *
+                        defer
+                }
+        }
+}
+```
+Source: https://gist.github.com/ryanburnette/d13575c9ced201e73f8169d3a793c1a3
+
+Create a new Swarm config:
+```bash
+docker config create Caddyfile /tmp/Caddyfile
+```
+
 ## Compose
 ```yaml
 version: '3.7'
@@ -27,7 +61,7 @@ services:
       mode: global
       placement:
         constraints:
-          - "node.role==manager"
+          - "node.role == manager"
 
   proxy:
     image: coryaent/lowery:master
@@ -79,32 +113,14 @@ services:
         caddy.order: "cache before rewrite"
         caddy.cache.allowed_http_verbs: "GET HEAD"
 
-  whoami2:
+  whoami:
     image: traefik/whoami
     networks:
       - www
     deploy:
       labels:
-        caddy: whoami.corya.co
-        caddy.reverse_proxy: "{{upstreams 80}}"
-
-  whoami3:
-    image: traefik/whoami
-    networks:
-      - www
-    deploy:
-      labels:
-        caddy: ingress.corya.enterprises
-        caddy.reverse_proxy: "{{upstreams 80}}"
-
-  whoami4:
-    image: traefik/whoami
-    networks:
-      - www
-    deploy:
-      labels:
-        caddy: anycast.corya.enterprises
-        caddy.reverse_proxy: "{{upstreams 80}}"
+        caddy: swarm.example.com
+        caddy.reverse_proxy: "http://whoami:80"
 
 configs:
   Caddyfile:
