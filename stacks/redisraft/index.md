@@ -15,7 +15,7 @@ Create the web overlay network:
 docker network create --attachable --driver overlay --opt encrypted --subnet 10.255.0.0/16 www
 ```
 
-Label the nodes that will store RedisRaft data (change `com.example` with the reverse DNS notation of the user's domain):
+Label the nodes that will store RedisRaft data (change `com.example` to the reverse DNS notation of the user's domain):
 ```bash
 export REDISRAFT_NODE_LABEL=com.example.redisraft=true &&\
 docker node update --label-add $REDISRAFT_NODE_LABEL worker-01 &&\
@@ -29,8 +29,7 @@ Set a CNAME record pointing to the swarm network, e.g. `redisraft.example.com` -
 ## Compose
 ```yaml
 version: "3.8"
-# redis-cli RAFT.CLUSTER INIT
-# redis-cli RAFT.CLUSTER JOIN redisraft-1:6379
+
 services:
   server:
     image: redislabs/ng-redis-raft
@@ -71,6 +70,7 @@ services:
         constraints:
           - "node.role == worker"
       labels:
+        # More info about these labels in the Caddy stack section
         caddy: redisraft.example.com
         caddy.basicauth.myusername: JDJhJDE0JG92UG1yc3VRYjBxTGdQTzh6RmxnOWV6dXhvUEpXeTMzendLR3FXcWhFNHd5UVE3d1cvcEh5Cg==
         caddy.reverse_proxy: http://browser.redisraft.host:80
@@ -107,7 +107,7 @@ Zoowou7een6aey9eici6Vaiz9     worker-02   Ready     Active                      
 aocaingaish5eepoh4aeTh9eo     worker-03   Ready     Active                          25.0.3
 ```
 
-Next, initialize the cluster with the node ID's. For the first node, run (on any manager):
+Next, initialize the cluster with the node ID's. Replace the service ID (`saeSh9chue6aoqu1ahv3Mah1t.redisraft.host`) with the output of the `docker node ls` command. For the first node, run (on any manager):
 ```bash
 docker run -it --rm --network redisraft redis \
 redis-cli -h saeSh9chue6aoqu1ahv3Mah1t.redisraft.host RAFT.CLUSTER INIT
