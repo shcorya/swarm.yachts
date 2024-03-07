@@ -104,7 +104,7 @@ services:
         constraints:
           - "node.role == worker"
       labels:
-        caddy.email: stephen@corya.net
+        caddy.email: swarm@example.com
         caddy.log: default
         caddy.log.output: stdout
         caddy.log.format: console
