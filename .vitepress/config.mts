@@ -6,7 +6,7 @@ export default defineConfig({
   description: "The Ultimate Guide to Docker Swarm",
   head: [
     [
-      'link', { rel: 'icon', href: '/artwork/favicon.ico' }
+      'link', { rel: 'icon', href: '/favicon.ico' }
     ],
     [
       'script', {},
