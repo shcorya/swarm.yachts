@@ -113,7 +113,6 @@ psql -d "$1" -c "CREATE DATABASE pgadmin OWNER pgadmin;"
 ## Compose
 ```yaml
 version: '3.8'
-
 services:
   database:
     image: coryaent/manning:master
@@ -153,13 +152,13 @@ services:
 
   mk-socket-dir:
     image: alpine
-    command: mkdir /run/patroni
+    command: mkdir -p /run/patroni
     volumes:
       - /run:/run
     deploy:
       mode: global-job
 
-  localhost-ingress:
+  localhost-tcp:
     image: alpine/socat
     command: "-dd TCP-L:5432,fork,bind=localhost UNIX:/run/patroni/proxy.sock"
     volumes:
@@ -168,43 +167,66 @@ services:
       - public
     deploy:
       mode: global
-      placement:
-        constraints:
-          - "node.role == worker"
+      resources:
+        limits:
+          memory: 32M
 
-  haproxy:
+  proxy:
     image: haproxy
-    hostname: haproxy.patroni.host
-    volumes:
-      - /run/patroni:/run/patroni
+    hostname: patroni.host
+    user: root
     configs:
-    - source: haproxy_conf
+    - source: patroni_haproxy_conf_1
       target: /usr/local/etc/haproxy/haproxy.cfg
     networks:
       - postgres
       - www
+    volumes:
+      - /run/patroni:/run/patroni
     deploy:
+      labels:
+        caddy: status.patroni.corya.enterprises
+        caddy.reverse_proxy: http://patroni.host:7000
+        caddy.basicauth.admin: JDJhJDE0JHZlYUFnci56NzV4ZDZDcmdjSXZMeU9scmVNVndmRTdkVWFiWjVoQkFPbUJ5WlZsL2lIL1BpCg==
       mode: global
       placement:
         constraints:
-          - node.role == worker
+          - "node.role == worker"
       restart_policy:
         delay: 0s
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: stephen@corya.co
+      PGADMIN_DEFAULT_PASSWORD_FILE: /run/secrets/pgadmin_default_password_2
+      PGADMIN_CONFIG_CONFIG_DATABASE_URI: "'postgresql://pgadmin:access@patroni.host:5432/pgadmin?sslmode=disable'"
+      PGADMIN_LISTEN_ADDRESS: 0.0.0.0
+      PGADMIN_CONFIG_PROXY_X_HOST_COUNT: 1
+      PGADMIN_CONFIG_MAX_LOGIN_ATTEMPTS: 0
+    secrets:
+      - pgadmin_default_password_2
+    networks:
+      - www
+      - postgres
+    deploy:
       labels:
-        caddy: status.patroni.corya.enterprises
-        caddy.reverse_proxy: http://haproxy.patroni.host:7000
-        caddy.basicauth.admin: JDJhJDE0JHZlYUFnci56NzV4ZDZDcmdjSXZMeU9scmVNVndmRTdkVWFiWjVoQkFPbUJ5WlZsL2lIL1BpCg==
+        caddy: pgadmin.patroni.corya.enterprises
+        caddy.reverse_proxy: http://pgadmin:80
+      placement:
+        constraints:
+          - "node.role == worker"
 
 configs:
   patroni_conf:
     external: true
-  patroni_haproxy_conf:
+  patroni_haproxy_conf_1:
     external: true
   init_pgadmin_db_2:
     external: true
 
 secrets:
-  pgadmin_default_password:
+  pgadmin_default_password_2:
     external: true
   patroni_replication_password:
     external: true

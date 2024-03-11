@@ -72,6 +72,8 @@ services:
       - target: 443
         published: 443
         mode: host
+    extra_hosts:
+      - "node.docker.host:host-gateway"
     networks:
       - www
       - control
@@ -130,7 +132,11 @@ networks:
   redisraft:
     external: true
   www:
-    external: true
+    name: www
+    attachable: true
+    driver: overlay
+    driver_opts:
+      encrypted: "true"
   control:
     attachable: false
     driver: overlay

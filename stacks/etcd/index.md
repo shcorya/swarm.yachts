@@ -2,7 +2,7 @@
 
 [etcd](https://etcd.io/) is a distributed key-value store that uses raft consensus to maintain a consistent state among a group of nodes. It is highly versatile, and it has become an integral element of many other distributed stacks. Deploying etcd to Docker Swarm is straightforward, thanks in part to a feature which enables automatic bootstrapping.
 
-## Setup
+## Discovery
 
 To employ automatic bootstrapping, one needs a unique URL from an existing etcd cluster. A cluster for the bootstrapping process been made publically available. More information about etcd discovery can be found [here](https://etcd.io/docs/v3.5/op-guide/clustering/#discovery).
 
