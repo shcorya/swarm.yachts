@@ -34,7 +34,7 @@ export default defineConfig({
       { text: 'Home', link: '/' },
       { text: 'Getting Started', link: '/getting-started/' },
       { text: 'Stacks', link: '/stacks/' },
-      { text: 'Other Resources', link: '/resources/' },
+      { text: 'Appendix', link: '/resources/' },
     ],
 
     sidebar: {
@@ -51,12 +51,20 @@ export default defineConfig({
             ]},
             { text: 'etcd', link: '/stacks/etcd/', items:[
             ]},
+            { text: 'Bedrock', link: '/stacks/bedrock/', items:[
+            ]},
             { text: 'Patroni', link: '/stacks/patroni/', items:[
             ]},
             { text: 'Garage', link: '/stacks/garage/', items:[
             ]},
+            { text: 'cron', link: '/stacks/cron/', items:[
+            ]},
+            { text: 'Certbot', link: '/stacks/certbot/', items:[
+            ]},
+            { text: 'OpenLDAP', link: '/stacks/ldap/', items:[
+            ]},
           ]
-        }
+        },
       ],
 
       // This sidebar gets displayed when a user

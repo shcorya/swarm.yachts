@@ -4,13 +4,52 @@
 
 Caddy is an open-source web server that supports automatic, signed SSL/TLS certificate fetching. It can be administered while running allowing for near-zero downtime configuration changes. It can be used as a reverse proxy for Docker Swarm.
 
-Leveraging work from [Lucas Lorentz](https://github.com/lucaslorentz) and his [Caddy-Docker-Proxy](https://github.com/lucaslorentz/caddy-docker-proxy) plugin, Caddy can be configured on-the-fly with Swarm labels.
+Leveraging work from [Lucas Lorentz](https://github.com/lucaslorentz) and his [Caddy-Docker-Proxy](https://github.com/lucaslorentz/caddy-docker-proxy) plugin, Caddy can be configured on-the-fly with Swarm labels. The [Caddy-Docker-Proxy](https://github.com/lucaslorentz/caddy-docker-proxy) README contains extensive documentation and many examples.
 
 Caddy does not natively support high-availabiliy data storage, thus, in order to use it in a high-availability mode we must use a plugin. GitHub user [Gamalan](https://github.com/gamalan) has published a [plugin](https://github.com/gamalan/caddy-tlsredis) for storing Caddy certificates in a Redis database. Leveraging RedisRaft for high-availability, one can set up a reverse proxy for Docker Swarm with automatic certificate provisioning without a single point of failure.
 
-## Configuration
-To enable CORS, create a new Caddyfile at `/tmp/Caddyfile`:
+## DNS
+DNS alias records must be properly setup. Each node that will run the reverse proxy server should have an alias *with the same domain* pointed to its IP. Such a domain could be `swarm.example.com` or `ingress.swarm.example.com`. Setting up multiple alias records in this way is essential to ensuring high availability.
+
+For additional sites, a CNAME record should be set, pointing to the reverse proxy servers. For example, if proxy servers have alias record `ingress.swarm.example.com`, and the user wishes to setup a new service at `whoami.example.com`, a CNAME record should be created pointing `whoami.example.com` to `ingress.swarm.example.com`.
+
+In order to confirm that the Caddy setup works, `whoami.example.com` is set in the compose file to point to a simple web server which shows some useful information. Again, `whoami.example.com` should be set as a CNAME.
+
+## Environment Setup
+Several environment variables need to be set to deploy Caddy properly. First, set up an "ingress" label. If the domain is `example.com`, perhaps use `com.example.swarm.ingress`.
+```bash
+export CADDY_INGRESS_LABEL="com.example.swarm.ingress"
 ```
+
+Define an array of nodes which will host the reverse proxy.
+```bash
+export CADDY_PROXY_NODES=(worker-01 worker-02 worker-03)
+```
+
+Run this script to apply the label to each node.
+```bash
+#!/bin/bash
+for i in "${!CADDY_PROXY_NODES[@]}"
+do
+  docker node update --label-add $CADDY_INGRESS_LABEL=true ${CADDY_PROXY_NODES[i]}
+done
+```
+
+Set the domain for the swarm nodes.
+```bash
+export CADDY_INGRESS_DOMAIN="swarm.example.com"
+```
+
+Optionally, set an email address. This email will be used to alert the user of issues with certificate renewals.
+```bash
+export CADDY_EMAIL="me@example.com"
+```
+
+## Configuration
+To enable CORS, create a new Caddyfile config.
+```bash
+cat << EOF | docker config create Caddyfile -
+# from https://gist.github.com/ryanburnette/d13575c9ced201e73f8169d3a793c1a3
 (cors) {
         @cors_preflight{args.0} method OPTIONS
         @cors{args.0} header Origin {args.0}
@@ -34,16 +73,15 @@ To enable CORS, create a new Caddyfile at `/tmp/Caddyfile`:
                 }
         }
 }
+EOF
 ```
-Source: https://gist.github.com/ryanburnette/d13575c9ced201e73f8169d3a793c1a3
-
-Create a new Swarm config:
-```bash
-docker config create Caddyfile /tmp/Caddyfile
-```
+Other configuration options can be set by swarm labels.
 
 ## Compose
-```yaml
+The `*.example.com` domains should be changed to reflect the user's requirements.
+
+```bash
+cat << EOL | docker stack deploy -c - caddy
 version: '3.7'
 x-common-env: &common-env
   CADDY_CONTROLLER_NETWORK: 10.201.200.0/24
@@ -85,7 +123,7 @@ services:
       mode: global
       placement:
         constraints:
-          - "node.labels.enterprises.corya.ingress == true"
+          - "node.labels.$CADDY_INGRESS_LABEL == true"
       labels:
         caddy_controlled_server:
 
@@ -106,12 +144,12 @@ services:
         constraints:
           - "node.role == worker"
       labels:
-        caddy.email: swarm@example.com
+        caddy.email: ${CADDY_EMAIL:=me@example.com}
         caddy.log: default
         caddy.log.output: stdout
         caddy.log.format: console
         caddy.storage: redis
-        caddy.storage.redis.host: redisraft
+        caddy.storage.redis.host: redisraft.host
         caddy.order: "cache before rewrite"
         caddy.cache.allowed_http_verbs: "GET HEAD"
 
@@ -121,7 +159,7 @@ services:
       - www
     deploy:
       labels:
-        caddy: swarm.example.com
+        caddy: $CADDY_INGRESS_DOMAIN
         caddy.reverse_proxy: "http://whoami:80"
 
 configs:
@@ -137,6 +175,10 @@ networks:
     driver: overlay
     driver_opts:
       encrypted: "true"
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.255.0.0/16"
   control:
     attachable: false
     driver: overlay
@@ -151,11 +193,13 @@ networks:
     driver: overlay
     driver_opts:
       encrypted: "true"
+EOL
 ```
 
 ## Basic Authentication
+Basic access authentication can be enabled for a site, configured by labels. Caddy uses `bcrypt` encryption, optionally encoded with `base64`. Encoding with `base64` is highly recommended; otherwise, the user will have to modify the output of the `caddy hash-password`. Authentication hashes can safely be stored in service labels.
 
-Basic access authentication can be enabled for a site, configurable by labels. Caddy uses `bcrypt` encryption, optionally encoded with `base64`. Authontication hashes can safely be stored in service labels.
+The above example demonstrates setting a basic authentication requirement for the user `admin`.
 
 To generate a basic auntentication string:
 ```bash

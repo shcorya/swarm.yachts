@@ -7,13 +7,15 @@ prev:
 # RedisRaft
 Redis is an in-memory storage for various data types. It includes support for sets, lists, simple key-value pairs, and hash maps. RedisRaft is an extension to redis that provides a strong-consistency deployment option.
 
+Like with all raft clusters, an odd number of nodes should be deployed. Three to seven is recommended. A greater number of nodes increases the number of failures that the system can tolerate at the expense of speed.
+
 ## Before Deployment
 Label the nodes that will store RedisRaft data (change `com.example` to the reverse DNS notation of the user's domain.) This label will be used in the compose file to deploy the stack to select nodes.
 ```bash
 export REDISRAFT_LABEL="com.example.redisraft"
 ```
 
-Select which nodes will run RedisRaft
+Select which nodes will run RedisRaft.
 ```bash
 export REDISRAFT_NODES=(worker-01 worker-02 worker-03)
 ```
@@ -39,7 +41,7 @@ services:
     networks:
       default:
         aliases:
-          - redisraft
+          - redisraft.host
     command: >
       redis-server
       --loadmodule /redisraft.so

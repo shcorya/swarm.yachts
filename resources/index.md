@@ -1,6 +1,8 @@
 # Appendix
 
-## Compose Files
+## JuiceFS
+
+## Additional Compose Files
 
 https://github.com/ethibox/awesome-stacks/tree/master/stacks
 

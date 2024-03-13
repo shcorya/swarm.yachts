@@ -12,6 +12,9 @@ This guide assumes that the reader has basic knowledge of the command line, inst
 ## Provisioning
 At least six servers (three managers and three workers) are required to deploy docker swarm effectively. Root access on each of the servers is required. The servers will cost from $100 to $400 per year depending on which provider you choose. RackNerd is recommended. One can get started with six nodes hosted by RackNerd about $100, which will be charged on an annual basis.
 
+Having at least three managers is essential for high availability. From the [official docs](https://docs.docker.com/engine/swarm/admin_guide/#add-manager-nodes-for-fault-tolerance):
+> You should maintain an odd number of managers in the swarm to support manager node failures. Having an odd number of managers ensures that during a network partition, there is a higher chance that the quorum remains available to process requests if the network is partitioned into two sets. Keeping the quorum is not guaranteed if you encounter more than two network partitions.
+
 Recommended minimum specifications for [manager nodes](https://my.racknerd.com/cart.php?a=confproduct&i=1):
 - 1 vCPU
 - 10 GB SSD storage
@@ -28,20 +31,20 @@ Note: managers can also be workers, although this is not recommended for product
 
 Install Linux on each of the VPS's. This guide assumes Debian has been installed.
 
-## Setting DNS records
+## Setting DNS Records
 Create a DNS A record for each of your new machines. Then, set another A record which is the same domain name pointing to the three worker nodes. For example, if your worker IP's are `1.2.3.4`, `3.4.5.6`, and `5.6.7.8`, create the following A records:
 ```
 swarm.example.com. 300  IN      A       1.2.4.5
 swarm.example.com. 300  IN      A       3.4.5.6
 swarm.example.com. 300  IN      A       5.6.7.8
 ```
+More information about setting DNS records is available on the [Caddy Stack page](/stacks/caddy/#dns).
 
 ## Installation
 Open a secure shell to each of your managers and workers and run (as root):
 ```bash
-curl -s https://get.docker.com | sh
+curl -s https://get.docker.com | bash
 ```
-
 
 ## Initialization
 Then, on a manager node, run:

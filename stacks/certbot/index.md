@@ -17,21 +17,23 @@ CMD ["--help"]
 ## Configs
 Two similar configuration files are required to initialize and renew certificates. These configurations are similar, with the exception of the `domains` parameter. Running the `renew` command renews all certificates installed by Certbot on each machine.
 
-```ini
-# certbot_init_ini
+```bash
+cat << EOL | docker config create --template-driver golang certbot_init_ini -
 email = {{ env "CERTBOT_EMAIL" }}
 agree-tos = {{ env "CERTBOT_AGREE_TOS" }}
 authenticator = {{ env "CERTBOT_AUTHENTICATOR" }}
 dns-gandi-credentials = {{ env "CERTBOT_GANDI_CREDENTIALS_FILE" }}
 domains = {{ env "CERTBOT_DOMAINS" }}
+EOL
 ```
 ---
-```ini
-# certbot_renew_ini
+```bash
+cat << EOL | docker config create --template-driver golang certbot_renew_ini -
 email = {{ env "CERTBOT_EMAIL" }}
 agree-tos = {{ env "CERTBOT_AGREE_TOS" }}
 authenticator = {{ env "CERTBOT_AUTHENTICATOR" }}
 dns-gandi-credentials = {{ env "CERTBOT_GANDI_CREDENTIALS_FILE" }}
+EOL
 ```
 
 ## Compose
@@ -53,7 +55,7 @@ x-certbot-common: &certbot-common
 services:
   initialize:
     <<: *certbot-common
-    command: certonly --agree-tos --staging -n
+    command: certonly --agree-tos -n
     configs:
       - source: certbot_init_ini
         target: /etc/letsencrypt/cli.ini
@@ -62,7 +64,7 @@ services:
 
   renew:
     <<: *certbot-common
-    command: renew --agree-tos --staging -n
+    command: renew --agree-tos -n
     configs:
       - source: certbot_renew_ini
         target: /etc/letsencrypt/cli.ini
