@@ -44,14 +44,14 @@ export default defineConfig({
         {
           text: 'Stacks',
           items: [
+            { text: 'OpenLDAP', link: '/stacks/ldap/', items:[
+            ]},
             { text: 'RedisRaft', link: '/stacks/redisraft/', items:[
               // {text: "Compose", link: '/stacks/redisraft/#compose'}
             ]},
             { text: 'Caddy', link: '/stacks/caddy/', items:[
             ]},
             { text: 'etcd', link: '/stacks/etcd/', items:[
-            ]},
-            { text: 'Bedrock', link: '/stacks/bedrock/', items:[
             ]},
             { text: 'Patroni', link: '/stacks/patroni/', items:[
             ]},
@@ -60,8 +60,6 @@ export default defineConfig({
             { text: 'cron', link: '/stacks/cron/', items:[
             ]},
             { text: 'Certbot', link: '/stacks/certbot/', items:[
-            ]},
-            { text: 'OpenLDAP', link: '/stacks/ldap/', items:[
             ]},
           ]
         },
