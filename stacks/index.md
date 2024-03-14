@@ -23,14 +23,14 @@ Configs exist at the Swarm level, are stored in the raft log, and can be mounted
 ## Secrets
 Similar to configs, secrets exist at the Swarm level. Contrary to configs, secrets are encrypted at rest and stored within a container's filesystem with the use of a RAM disk.
 
-A secret can be set with `bash` without printing it to the console:
+A secret can be set with `bash` without printing it to the console. Note that the secret's value will not be printed to the console, but the secret's ID will.
 ```bash
-read -s MY_SECRET && echo $MY_SECRET | docker secret create my_example_secret - && unset MY_SECRET
+read -s -p "Enter the new secret: " MY_SECRET && echo $MY_SECRET | docker secret create my_example_secret - && unset MY_SECRET
 ```
 
-Note that `echo` will append a newline to the end of the newly created scret. To prevent this behaviour, replace `echo` with `printf`:
+Note that `echo` will append a newline to the end of the newly created scret. To prevent this behaviour, replace `echo` with `printf`.
 ```bash
-read -s MY_SECOND_SECRET && print $MY_SECOND_SECRET | docker secret create my_second_secret - && unset MY_SECOND_SECRET
+read -s -p "Enter the new secret: " MY_SECOND_SECRET && printf $MY_SECOND_SECRET | docker secret create my_second_secret - && unset MY_SECOND_SECRET
 ```
 
 ## Networks

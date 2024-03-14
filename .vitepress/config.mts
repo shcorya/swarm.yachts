@@ -44,12 +44,12 @@ export default defineConfig({
         {
           text: 'Stacks',
           items: [
-            { text: 'OpenLDAP', link: '/stacks/ldap/', items:[
-            ]},
             { text: 'RedisRaft', link: '/stacks/redisraft/', items:[
               // {text: "Compose", link: '/stacks/redisraft/#compose'}
             ]},
             { text: 'Caddy', link: '/stacks/caddy/', items:[
+            ]},
+            { text: 'OpenLDAP', link: '/stacks/ldap/', items:[
             ]},
             { text: 'etcd', link: '/stacks/etcd/', items:[
             ]},
