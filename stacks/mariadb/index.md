@@ -16,7 +16,8 @@ Synchronous replication for MariaDB is achieved by using [Galera Cluster](https:
 ## Setup
 Due to Patroni already being configured in a semisynchronous manner, this tutorial will utilize synchronous replication via Galera Cluster.
 ### Config
-```toml
+```bash
+cat << EOL | docker config create --template-driver golang galera_tmpl -
 [mysqld]
 binlog_format=ROW
 default-storage-engine=innodb
@@ -37,6 +38,8 @@ wsrep_sst_method=rsync
 # Galera Node Configuration
 wsrep_node_address="{{ env "GALERA_NODE_ADDRESS" }}"
 wsrep_node_name="{{ env "GALERA_NODE_NAME" }}"
+EOL
+
 ```
 ### Environment
 ```bash
@@ -66,12 +69,16 @@ do
   if [[ $i == 0 ]]
   then
     GALERA_PRIMARY_HOST="${GALERA_NODE_IDS[i]}.galera.host"
-    GALERA_PEER_LIST=$GALERA_PRIMARY_HOST
+    GALERA_PEER_LIST="gcomm://$GALERA_PRIMARY_HOST"
   else
     GALERA_PEER_LIST="$GALERA_PEER_LIST,${GALERA_NODE_IDS[i]}.galera.host"
   fi
 done
+export GALERA_PRIMARY_HOST
+export GALERA_PEER_LIST
 ```
+
+## Compose
 
 ```bash
 cat EOL << | docker stack deploy -c - galera
@@ -83,8 +90,11 @@ services:
     environment
       GALERA_NODE_ADDRESS: "{{.Node.ID}}.galera.host"
       GALERA_NODE_NAME: "{{.Node.Hostname}}_{{.Node.ID}}"
-      GALERA_CLUSTER_ADDRESS:
+      GALERA_CLUSTER_ADDRESS: $GALERA_PEER_LIST
     configs:
       - source: galera_tmpl
         target: /etc/mysql/conf.d/galera.cnf
+EOL
 ```
+
+## Bootstrap

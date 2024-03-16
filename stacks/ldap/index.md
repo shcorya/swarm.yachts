@@ -3,8 +3,8 @@
 # GLAuth
 [GLAuth](https://glauth.github.io/) is a go-lang implementation of the LDAP server protocol that can be configured to utilize a variety of backend storage, including S3 or a SQL database. MySQL/MariaDB, PostgreSQL, and SQLite are supported. A config file can also be used as a backend, which could be deployed as a swarm config. This example stack deployment will use PostgreSQL.
 
-## Configuration
-First, create the docker config template, which can be used with either MariaDB or PostgreSQL. By using a config template, one can set GLAuth configuration options with environmental variables add to the swarm service.
+## Setup
+First, create the docker config template, which can be used with either MariaDB or PostgreSQL. By using a config template, one can set GLAuth configuration options with environmental variables passed to the swarm service.
 
 ### Swarm Config
 ```bash

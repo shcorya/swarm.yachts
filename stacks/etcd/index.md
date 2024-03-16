@@ -13,7 +13,7 @@ Setup for etcd is similar to RedisRaft.
 
 First, define the label name which will be applied to the etcd nodes.
 ```bash
-export ETCD_LABEL="com.example.etcd"
+export ETCD_LABEL="yachts.swarm.etcd"
 ```
 
 Define the array of nodes that will run etcd.

@@ -1,3 +1,5 @@
+*This stack depends on cron.*
+
 # Certbot
 Certbot is a program that handles the creation and renewal of Let's Encrypt certificates. Using this stack does not require any open ports.
 
