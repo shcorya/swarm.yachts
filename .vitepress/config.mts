@@ -49,17 +49,21 @@ export default defineConfig({
             ]},
             { text: 'Caddy', link: '/stacks/caddy/', items:[
             ]},
-            { text: 'OpenLDAP', link: '/stacks/ldap/', items:[
-            ]},
             { text: 'etcd', link: '/stacks/etcd/', items:[
             ]},
             { text: 'Patroni', link: '/stacks/patroni/', items:[
+            ]},
+            { text: 'MariaDB', link: '/stacks/mariadb/', items:[
             ]},
             { text: 'Garage', link: '/stacks/garage/', items:[
             ]},
             { text: 'cron', link: '/stacks/cron/', items:[
             ]},
             { text: 'Certbot', link: '/stacks/certbot/', items:[
+            ]},
+            { text: 'cAdvisor', link: '/stacks/cadvisor/', items:[
+            ]},
+            { text: 'GLAuth', link: '/stacks/ldap/', items:[
             ]},
           ]
         },
