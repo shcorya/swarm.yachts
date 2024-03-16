@@ -1,64 +1,37 @@
-# OpenLDAP
+*This stack depends on Patroni or MariaDB for high availability.*
 
-## Setup
+# GLAuth
+[GLAuth](https://glauth.github.io/) is a go-lang implementation of the LDAP server protocol that can be configured to utilize a variety of backend storage, including S3 or a SQL database. MySQL/MariaDB, PostgreSQL, and SQLite are supported. A config file can also be used as a backend, which could be deployed as a swarm config. This example stack deployment will use PostgreSQL.
 
-### Application Settings
+## Configuration
+First, create the docker config template, which can be used with either MariaDB or PostgreSQL. By using a config template, one can set GLAuth configuration options with environmental variables add to the swarm service.
 
-Set the timezone, organization name, and domain name.
+### Swarm Config
 ```bash
-export LDAP_TIMEZONE="America/Indianapolis"
-```
-```bash
-export LDAP_ORGANIZATION="Example, LLC"
-```
-```bash
-export LDAP_DOMAIN="example.com"
-```
+cat << EOL | docker config create --template-driver golang glauth_conf -
+[ldap]
+  enabled = true
+  listen = "0.0.0.0:389"
+  tls = false
 
-### Swarm Nodes
+[ldaps]
+  enabled = false
 
-Select the label which will be applied to the OpenLDAP nodes.
-```bash
-export OPENLDAP_LABEL="com.example.ldap"
-```
+[backend]
+  datastore = "plugin"
+  plugin = "{{ env "GLAUTH_BACKEND_PLUGIN" }}"
+  pluginhandler = "{{ env "GLAUTH_BACKEND_HANDLER" }}"
+  database = "{{ env "GLAUTH_BACKEND_ENDPOINT" }}"
 
-Select which nodes will run OpenLDAP.
-```bash
-export OPENLDAP_NODES=(worker-01 worker-02 worker-03)
-```
-
-Apply the label to the selected nodes.
-```bash
-#!/bin/bash
-for i in "${!OPENLDAP_NODES[@]}"
-do
-  docker node update --label-add $OPENLDAP_LABEL=true ${OPENLDAP_NODES[i]}
-done
+[api]
+  enabled = true
+  internals = true
+  listen = "0.0.0.0:5555"
+EOL
 ```
 
-Compile the newly labeled nodes to a list of peers.
-```bash
-#!/bin/bash
-LDAP_REPLICATION_HOSTS=""
-OPENLDAP_NODE_IDS=($(docker node ls -q --filter node.label=$OPENLDAP_LABEL=true | tr '\n' ' '))
-for i in "${!OPENLDAP_NODE_IDS[@]}"
-do
-  LDAP_REPLICATION_HOSTS="$LDAP_REPLICATION_HOSTS${OPENLDAP_NODE_IDS[i]}.ldap.host "
-done
-export LDAP_REPLICATION_HOSTS
-```
-
-### Secrets
-Create secrets for `ldap_admin_pass`, `ldap_config_pass`, and `ldap_ro_pass`.
-```bash
-read -s -p "Enter the new secret: " LDAP_ADMIN_PASS && printf $LDAP_ADMIN_PASS | docker secret create ldap_admin_pass - && unset LDAP_ADMIN_PASS
-```
-```bash
-read -s -p "Enter the new secret: " LDAP_CONFIG_PASS && printf $LDAP_CONFIG_PASS | docker secret create ldap_config_pass - && unset LDAP_CONFIG_PASS
-```
-```bash
-read -s -p "Enter the new secret: " LDAP_RO_PASS && printf $LDAP_RO_PASS | docker secret create ldap_ro_pass - && unset LDAP_RO_PASS
-```
+### PostgreSQL Database
+Create a new database on the PostgreSQL instance. This can be done with pgAdmin or `psql`.
 
 ## Compose
 ```bash
@@ -67,48 +40,28 @@ version: '3.8'
 
 services:
 
-  directory:
-    hostname: "{{.Node.ID}}.ldap.host"
-    image: tiredofit/openldap:2.6
-    volumes:
-      - backup:/data/backup
-      - data:/var/lib/openldap
-      - configuration:/etc/openldap
-    secrets:
-      - ldap_admin_pass
-      - ldap_config_pass
-      - ldap_ro_pass
+  glauth:
+    image: glauth/glauth-plugins
+    hostname: ldap.host
+    configs:
+      - source: glauth_conf
+        target: /app/config/config.cfg
     environment:
-      ADMIN_PASS_FILE: /run/secrets/ldap_admin_pass
-      CONFIG_PASS_FILE: /run/secrets/ldap_config_pass
-      ENABLE_READONLY_USER: "TRUE"
-      READONLY_USER_USER: local
-      READONLY_USER_PASS_FILE: /run/secrets/ldap_ro_pass
-      TIMEZONE: $LDAP_TIMEZONE
-      ORGANIZATION: $LDAP_ORGANIZATION
-      DOMAIN: $LDAP_DOMAIN
-      SLAPD_HOSTS: ldap:///
-      LOG_LEVEL: 256
-      DEBUG_MODE: "FALSE"
-      ENABLE_TLS: "FALSE"
-      ENABLE_REPLICATION: "TRUE"
-      REPLICATION_HOSTS: $LDAP_REPLICATION_HOSTS
-      BACKUP_INTERVAL: 1440
-      BACKUP_RETENTION: 43200
-      CONTAINER_ENABLE_MONITORING: "FALSE"
+      GLAUTH_BACKEND_PLUGIN: postgres.so
+      GLAUTH_BACKEND_HANDLER: NewPostgresHandler
+      GLAUTH_BACKEND_ENDPOINT:
     networks:
-      internal:
-        aliases:
-          - ldap.host
+      - internal
+      - postgres
     deploy:
-      mode: global
-      placement:
-        constraints:
-          - "node.labels.$OPENLDAP_LABEL == true"
+      replicas: 2
+      labels:
+        caddy: ldap.corya.enterprises
+        caddy.reverse_proxy: http://ldap.host:5555
 
   mk-socket-dir:
     image: alpine
-    command: mkdir -p /run/openldap
+    command: mkdir -p /run/glauth
     volumes:
       - /run:/run
     deploy:
@@ -116,9 +69,9 @@ services:
 
   socket-in:
     image: alpine/socat
-    command: "-dd TCP-L:389,fork,bind=localhost UNIX:/run/openldap/openldap.sock"
+    command: "-dd TCP-L:389,fork,bind=localhost UNIX:/run/glauth/glauth.sock"
     volumes:
-      - /run/openldap:/run/openldap
+      - /run/glauth:/run/glauth
     networks:
       - public
     deploy:
@@ -126,9 +79,9 @@ services:
 
   socket-out:
     image: alpine/socat
-    command: "-dd UNIX-L:/run/openldap/openldap.sock,fork TCP:ldap.host:389"
+    command: "-dd UNIX-L:/run/glauth/glauth.sock,fork TCP:ldap.host:389"
     volumes:
-      - /run/openldap:/run/openldap
+      - /run/glauth:/run/glauth
     networks:
       - internal
     deploy:
@@ -149,20 +102,8 @@ networks:
     external: true
     name: host
 
-secrets:
-  ldap_admin_pass:
+configs:
+  glauth_conf:
     external: true
-  ldap_config_pass:
-    external: true
-  ldap_ro_pass:
-    external: true
-
-volumes:
-  backup:
-    driver: local
-  data:
-    driver: local
-  configuration:
-    driver: local
 EOL
 ```

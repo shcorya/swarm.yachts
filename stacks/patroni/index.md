@@ -6,6 +6,8 @@
 
 Being a highly configurable system, Patroni and its related services require a comprably high amount of configuration. Many of these options can (and should) be stored as swarm configs. Some configuration values will also be set by environmental variables.
 
+The setup detailed below configures one synchronous and one asyncronous replica. If one of the syncronous replicas goes offline, the asyncronous replica takes over as the syncronous replica. This setup creates a balance between strong consistency and availability.
+
 ## Services
 Successful deployment of Patroni depends on sereval services. In general, the database stores data on the designated nodes, the proxy and socat route queries, and pgAdmin provides a convienint, visual means of administering roles and databases.
 

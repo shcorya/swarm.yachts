@@ -1,7 +1,11 @@
 # Garage
+[Garage](https://garagehq.deuxfleurs.fr/) is a distributed object storage program that implements the Amazon S3 protocol. Garage uses conflict-free replicated data types coupled with a quorum system to provide consistency and high availability.
+
+## Provisioning Storage Nodes
+The basic nodes detailed in the [Getting Started](/getting-started/#basic-node-provisioning) section will likely not be adequate for data storage; therefore, additional nodes should be provisioned. One choice for affordable storage nodes is Contabo. A basic [storage VPS](https://contabo.com/en/storage-vps/) from Contabo costs $5.50 per month for 800 GB of SSD storage. Storage nodes are available in different locations which can be used for a multi-region deployment.
 
 ## Configuration
-Run this script to create the config template `garage_tmpl`:
+Run this script to create the config template `garage_tmpl`.
 ```bash
 cat << EOL | docker config create --template-driver golang garage_tmpl -
 replication_mode = "3"

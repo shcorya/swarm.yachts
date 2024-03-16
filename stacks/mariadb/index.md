@@ -1,0 +1,90 @@
+# MariaDB
+[MariaDB](https://mariadb.org/) is a fork of MySQL created by the one of the original founders of MySQL after MySQL was acquired by Oracle Corporation. MariaDB intends to maintain compatability with MySQL, so MySQL clients and other software designed for MySQL connections should be able to connect without modification.
+
+## Replication Modes
+MariaDB supports multiple replication modes, each having advantages and disadvantages. Different modes generally sacrafice speed for consistency and vice versa. MariaDB nodes are defined as "masters" or "slaves", although this verbiage is being phased out in favor of "primary" and "replica", respctively.
+
+### Asynchronous Replication
+Asnchronous replication does not require replicas to confirm SQL transactions before the query result is sent to the client. This improves performance as only a single server needs to communicate with the client at a time, but provides no guarantee of consistency among the various nodes. Within the context of MariaDB, this mode is also called [Standard Replication](https://mariadb.com/kb/en/replication-overview/#standard-replication).
+
+### Semisynchronous Replication
+Semisynchronous replication is effectively the same replication mode deployed on the [Patroni](/stacks/patroni). The master server only waits for one replica to acknowledge a write before returning the result to the client.
+
+### Synchronous Replication
+Synchronous replication for MariaDB is achieved by using [Galera Cluster](https://galeracluster.com/library/documentation/overview.html#:~:text=This%20approach%20is%20also%20called,thus%20asynchronously%20on%20each%20node.&text=Galera%20Cluster%20provides%20a%20significant,availability%20for%20the%20MySQL%20system.). Within a Galera Cluster, nodes communicate and coordinate using the raft protocol (the same protocol used by etcd and RedisRaft.) Each node is aware of which node is the primary, and all reads and writes happen on the primary node. This mode provides the strongest consistency guarantee.
+
+## Setup
+Due to Patroni already being configured in a semisynchronous manner, this tutorial will utilize synchronous replication via Galera Cluster.
+### Config
+```toml
+[mysqld]
+binlog_format=ROW
+default-storage-engine=innodb
+innodb_autoinc_lock_mode=2
+bind-address=0.0.0.0
+
+# Galera Provider Configuration
+wsrep_on=ON
+wsrep_provider=/usr/lib/galera/libgalera_smm.so
+
+# Galera Cluster Configuration
+wsrep_cluster_name="test_cluster"
+wsrep_cluster_address="gcomm://{{ env "GALERA_CLUSTER_ADDRESS"" }}"
+
+# Galera Synchronization Configuration
+wsrep_sst_method=rsync
+
+# Galera Node Configuration
+wsrep_node_address="{{ env "GALERA_NODE_ADDRESS" }}"
+wsrep_node_name="{{ env "GALERA_NODE_NAME" }}"
+```
+### Environment
+```bash
+export GALERA_LABEL="yachts.swarm.galera"
+```
+
+Select which nodes will run MariaDB.
+```bash
+export GALERA_NODES=(worker-01 worker-02 worker-03)
+```
+
+Apply the label to the selected nodes.
+```bash
+#!/bin/bash
+for i in "${!GALERA_NODES[@]}"
+do
+  docker node update --label-add $GALERA_LABEL=true ${GALERA_NODES[i]}
+done
+```
+
+```bash
+#!/bin/bash
+GALERA_NODE_IDS=($(docker node ls -q --filter node.label=$GALERA_LABEL=true | tr '\n' ' '))
+GALERA_PEER_LIST=""
+for i in "${!REDISRAFT_NODE_IDS[@]}"
+do
+  if [[ $i == 0 ]]
+  then
+    GALERA_PRIMARY_HOST="${GALERA_NODE_IDS[i]}.galera.host"
+    GALERA_PEER_LIST=$GALERA_PRIMARY_HOST
+  else
+    GALERA_PEER_LIST="$GALERA_PEER_LIST,${GALERA_NODE_IDS[i]}.galera.host"
+  fi
+done
+```
+
+```bash
+cat EOL << | docker stack deploy -c - galera
+version: '3.8'
+
+services:
+  node:
+    image: mariadb
+    environment
+      GALERA_NODE_ADDRESS: "{{.Node.ID}}.galera.host"
+      GALERA_NODE_NAME: "{{.Node.Hostname}}_{{.Node.ID}}"
+      GALERA_CLUSTER_ADDRESS:
+    configs:
+      - source: galera_tmpl
+        target: /etc/mysql/conf.d/galera.cnf
+```

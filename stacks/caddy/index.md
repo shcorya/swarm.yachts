@@ -8,17 +8,17 @@ Leveraging work from [Lucas Lorentz](https://github.com/lucaslorentz) and his [C
 
 Caddy does not natively support high-availabiliy data storage, thus, in order to use it in a high-availability mode we must use a plugin. GitHub user [Gamalan](https://github.com/gamalan) has published a [plugin](https://github.com/gamalan/caddy-tlsredis) for storing Caddy certificates in a Redis database. Leveraging RedisRaft for high-availability, one can set up a reverse proxy for Docker Swarm with automatic certificate provisioning without a single point of failure.
 
-## DNS
-DNS alias records must be properly setup. Each node that will run the reverse proxy server should have an alias *with the same domain* pointed to its IP. Such a domain could be `swarm.example.com` or `ingress.swarm.example.com`. Setting up multiple alias records in this way is essential to ensuring high availability.
+## CNAME DNS Records
+Ensure that the requisate alias records have been set in accordance with the [Getting Started](/getting-started/#setting-dns-records) page.
 
-For additional sites, a CNAME record should be set, pointing to the reverse proxy servers. For example, if proxy servers have alias record `ingress.swarm.example.com`, and the user wishes to setup a new service at `whoami.example.com`, a CNAME record should be created pointing `whoami.example.com` to `ingress.swarm.example.com`.
+For additional sites, a CNAME record should be set, pointing to the reverse proxy servers. For example, if proxy servers have alias record `swarm.example.com`, and the user wishes to setup a new service at `whoami.example.com`, a CNAME record should be created pointing `whoami.example.com` to `swarm.example.com`.
 
-In order to confirm that the Caddy setup works, `whoami.example.com` is set in the compose file to point to a simple web server which shows some useful information. Again, `whoami.example.com` should be set as a CNAME.
+In order to confirm that the Caddy setup works, `whoami.example.com` is set in the compose file. The `traefik/whoami` image is a simple web server which shows some useful information.
 
 ## Environment Setup
-Several environment variables need to be set to deploy Caddy properly. First, set up an "ingress" label. If the domain is `example.com`, perhaps use `com.example.swarm.ingress`.
+Several environment variables need to be set to deploy Caddy properly. First, set up an "ingress" label. This can be change to reflect the user's domain. If the domain is `example.com`, perhaps use `com.example.swarm.ingress`.
 ```bash
-export CADDY_INGRESS_LABEL="com.example.swarm.ingress"
+export CADDY_INGRESS_LABEL="yachts.swarm.ingress"
 ```
 
 Define an array of nodes which will host the reverse proxy.
@@ -35,7 +35,7 @@ do
 done
 ```
 
-Set the domain for the swarm nodes.
+Set the `CADDY_INGRESS_DOMAIN` variable to the A records that were setup previously.
 ```bash
 export CADDY_INGRESS_DOMAIN="swarm.example.com"
 ```
@@ -144,7 +144,7 @@ services:
         constraints:
           - "node.role == worker"
       labels:
-        caddy.email: ${CADDY_EMAIL:=me@example.com}
+        caddy.email: ${CADDY_EMAIL:=null@swarm.yachts}
         caddy.log: default
         caddy.log.output: stdout
         caddy.log.format: console

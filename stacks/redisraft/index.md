@@ -10,9 +10,9 @@ Redis is an in-memory storage for various data types. It includes support for se
 Like with all raft clusters, an odd number of nodes should be deployed. Three to seven is recommended. A greater number of nodes increases the number of failures that the system can tolerate at the expense of speed.
 
 ## Before Deployment
-Label the nodes that will store RedisRaft data (change `com.example` to the reverse DNS notation of the user's domain.) This label will be used in the compose file to deploy the stack to select nodes.
+Label the nodes that will store RedisRaft data (you may wish to change `yachts.swarm` to the reverse DNS notation of the user's domain.) This label will be used in the compose file to deploy the stack to select nodes.
 ```bash
-export REDISRAFT_LABEL="com.example.redisraft"
+export REDISRAFT_LABEL="yachts.swarm.redisraft"
 ```
 
 Select which nodes will run RedisRaft.

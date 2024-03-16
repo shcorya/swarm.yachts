@@ -9,7 +9,7 @@ Docker swarm is an orchestration tool for docker containers. It is backed by a s
 
 This guide assumes that the reader has basic knowledge of the command line, installing packages, provisioning virtual private servers, and setting DNS records.
 
-## Provisioning
+## Basic Node Provisioning
 At least six servers (three managers and three workers) are required to deploy docker swarm effectively. Root access on each of the servers is required. The servers will cost from $100 to $400 per year depending on which provider you choose. RackNerd is recommended. One can get started with six nodes hosted by RackNerd about $100, which will be charged on an annual basis.
 
 Having at least three managers is essential for high availability. From the [official docs](https://docs.docker.com/engine/swarm/admin_guide/#add-manager-nodes-for-fault-tolerance):
@@ -29,7 +29,7 @@ As implied by the names, the worker nodes will do most of the computation. The m
 
 Note: managers can also be workers, although this is not recommended for production deployments. Deploying more than a few stacks at a time could excessively tax a machine's resources. Overloading management nodes can result in degredation of the entire swarm.
 
-Install Linux on each of the VPS's. This guide assumes Debian has been installed.
+Install Linux on each of the VPS's. This guide assumes Debian has been installed on each host.
 
 ## Setting DNS Records
 Create a DNS A record for each of your new machines. Then, set another A record which is the same domain name pointing to the three worker nodes. For example, if your worker IP's are `1.2.3.4`, `3.4.5.6`, and `5.6.7.8`, create the following A records:
