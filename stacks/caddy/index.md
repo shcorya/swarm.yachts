@@ -31,22 +31,23 @@ Run this script to apply the label to each node.
 #!/bin/bash
 for i in "${!CADDY_PROXY_NODES[@]}"
 do
-  docker node update --label-add $CADDY_INGRESS_LABEL=true ${CADDY_PROXY_NODES[i]}
+  docker node update --label-add \
+  $CADDY_INGRESS_LABEL=true ${CADDY_PROXY_NODES[i]}
 done
 ```
-
-Set the `CADDY_INGRESS_DOMAIN` variable to the A records that were setup previously.
+---
+Set the `CADDY_INGRESS_DOMAIN` variable to the domain of the A records that were setup previously.
 ```bash
 export CADDY_INGRESS_DOMAIN="swarm.example.com"
 ```
-
+---
 Optionally, set an email address. This email will be used to alert the user of issues with certificate renewals.
 ```bash
 export CADDY_EMAIL="me@example.com"
 ```
 
 ## Configuration
-To enable CORS, create a new Caddyfile config.
+In order to configure CORS in the future, create a new Caddyfile config.
 ```bash
 cat << EOF | docker config create Caddyfile -
 # from https://gist.github.com/ryanburnette/d13575c9ced201e73f8169d3a793c1a3
@@ -199,9 +200,22 @@ EOL
 ## Basic Authentication
 Basic access authentication can be enabled for a site, configured by labels. Caddy uses `bcrypt` encryption, optionally encoded with `base64`. Encoding with `base64` is highly recommended; otherwise, the user will have to modify the output of the `caddy hash-password`. Authentication hashes can safely be stored in service labels.
 
-The above example demonstrates setting a basic authentication requirement for the user `admin`.
-
 To generate a basic auntentication string:
 ```bash
-echo $(caddy hash-password | base64 -w 0)
+MY_BASIC_AUTH=$(caddy hash-password | base64 -w 0)
+```
+
+To apply that basic authentication requirement to a web service (using an example user `admin`):
+```yaml
+# ...
+  whoami:
+    image: traefik/whoami
+    networks:
+      - www
+    deploy:
+      labels:
+        caddy: $CADDY_INGRESS_DOMAIN
+        caddy.reverse_proxy: "http://whoami:80"
+        caddy.basicauth.admin: $MY_BASIC_AUTH
+# ...
 ```

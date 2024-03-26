@@ -2,7 +2,21 @@
 [Garage](https://garagehq.deuxfleurs.fr/) is a distributed object storage program that implements the Amazon S3 protocol. Garage uses conflict-free replicated data types coupled with a quorum system to provide consistency and high availability.
 
 ## Provisioning Storage Nodes
-The basic nodes detailed in the [Getting Started](/getting-started/#basic-node-provisioning) section will likely not be adequate for data storage; therefore, additional nodes should be provisioned. One choice for affordable storage nodes is Contabo. A basic [storage VPS](https://contabo.com/en/storage-vps/) from Contabo costs $5.50 per month for 800 GB of SSD storage. Storage nodes are available in different locations which can be used for a multi-region deployment.
+The basic nodes detailed in the [Getting Started](/getting-started/#basic-node-provisioning) section will likely not be adequate for data storage; therefore, additional nodes should be provisioned. One choice for affordable storage nodes is Contabo. A basic [storage VPS](https://contabo.com/en/storage-vps/) from Contabo costs $5.50 per month for 800 GB of SSD storage. Storage nodes are available in different locations which can be used for a multi-region deployment. Consider naming these storage nodes `storage-01`, `storage-02`, and `storage-03`.
+
+## Setup
+The configuration in this guide will run a Garage gateway node on each swarm ingress node and a Garage store on each of the storage nodes.
+
+### Environment
+Ensure that the [ingress label](/stacks/caddy/#environment-setup) is set for each ingress node (the nodes that run [Caddy](/stacks/caddy/)). The same label should be used for garage as Caddy; the Garage gateway nodes should already be labeled.
+```bash
+export GARAGE_INGRESS_LABEL="yachts.swarm.ingress"
+```
+
+Define a label that will apply to the storage nodes. Note that this label will be set to `storage`, not `true`.
+```bash
+export GARAGE_STORAGE_LABEL="yachts.swarm.garage"
+```
 
 ## Configuration
 Run this script to create the config template `garage_tmpl`.
@@ -15,8 +29,7 @@ data_dir = "/var/lib/garage/data"
 metadata_fsync = true
 data_fsync = false
 
-db_engine = "lmdb"
-lmdb_map_size = "1T"
+db_engine = "sqlite"
 
 block_size = 1048576
 compression_level = 1
@@ -39,7 +52,8 @@ EOL
 ```
 
 ## Compose
-```yaml
+```bash
+cat << EOL | docker stack deploy -c - garage
 version: '3.8'
 
 x-garage-image: &garage-image
@@ -72,7 +86,7 @@ x-local-socket: &local-socket
     mode: global
     placement:
       constraints:
-        - "node.labels.enterprises.corya.garage == gateway"
+        - "node.labels.$GARAGE_INGRESS_LABEL == gateway"
 
 services:
   mk-socket-dir:
@@ -97,7 +111,7 @@ services:
       GARAGE_WEB_BIND_ADDR: 0.0.0.0:3902
     volumes:
       - data:/var/lib/garage/data
-      - metadata: /var/lib/garage/meta
+      - metadata:/var/lib/garage/meta
     deploy:
       mode: global
       placement:
@@ -117,6 +131,8 @@ services:
     <<: *shared-configs
     <<: *shared-secrets
     hostname: "{{.Node.Hostname}}.garage.host"
+    networks:
+      - internal
     environment:
       <<: *shared-env
       GARAGE_S3_BIND_ADDR: /run/garage/s3.sock
@@ -153,5 +169,8 @@ volumes:
     driver: local
   metadata:
     driver: local
+EOL
 ```
 
+## After Deployment
+After the Garage stack has been deployed, it is necessary to [create a cluster layout](https://garagehq.deuxfleurs.fr/documentation/cookbook/real-world/#creating-a-cluster-layout).

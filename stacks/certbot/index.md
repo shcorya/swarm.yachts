@@ -43,11 +43,11 @@ EOL
 version: '3.8'
 
 x-certbot-common: &certbot-common
-  image: coryaent/cypert:master
+  image: coryaent/cypert
   secrets:
     - gandi_certbot_ini
   volumes:
-    - certificates:/etc/letsencrypt/
+    - localcerts:/etc/letsencrypt/
   environment:
     CERTBOT_EMAIL: username@example.com
     CERTBOT_AUTHENTICATOR: dns-gandi
@@ -90,8 +90,8 @@ secrets:
     external: true
 
 volumes:
-  certificates:
+  localcerts:
     driver: local
-    name: certificates
+    name: localcerts
 
 ```

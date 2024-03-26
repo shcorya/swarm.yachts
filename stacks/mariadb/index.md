@@ -1,3 +1,5 @@
+*The web interface for this stack, phpMyAdmin, depends on Caddy.*
+
 # MariaDB
 [MariaDB](https://mariadb.org/) is a fork of MySQL created by the one of the original founders of MySQL after MySQL was acquired by Oracle Corporation. MariaDB intends to maintain compatability with MySQL, so MySQL clients and other software designed for MySQL connections should be able to connect without modification.
 
@@ -14,8 +16,10 @@ Semisynchronous replication is effectively the same replication mode deployed on
 Synchronous replication for MariaDB is achieved by using [Galera Cluster](https://galeracluster.com/library/documentation/overview.html#:~:text=This%20approach%20is%20also%20called,thus%20asynchronously%20on%20each%20node.&text=Galera%20Cluster%20provides%20a%20significant,availability%20for%20the%20MySQL%20system.). Within a Galera Cluster, nodes communicate and coordinate using the raft protocol (the same protocol used by etcd and RedisRaft.) Each node is aware of which node is the primary, and all reads and writes happen on the primary node. This mode provides the strongest consistency guarantee.
 
 ## Setup
-Due to Patroni already being configured in a semisynchronous manner, this tutorial will utilize synchronous replication via Galera Cluster.
-### Config
+This tutorial will utilize synchronous replication via Galera Cluster. A slight [modification](https://github.com/coryaent/mantle?tab=readme-ov-file#the-modification) has been made to the [official MariaDB image](https://hub.docker.com/_/mariadb) to automate the bootstrapping process.
+
+### Configs
+Create the template which will configure Galera on each host.
 ```bash
 cat << EOL | docker config create --template-driver golang galera_tmpl -
 [mysqld]
@@ -29,8 +33,8 @@ wsrep_on=ON
 wsrep_provider=/usr/lib/galera/libgalera_smm.so
 
 # Galera Cluster Configuration
-wsrep_cluster_name="test_cluster"
-wsrep_cluster_address="gcomm://{{ env "GALERA_CLUSTER_ADDRESS"" }}"
+wsrep_cluster_name="{{ env "GALERA_CLUSTER_NAME" }}"
+wsrep_cluster_address="{{ env "GALERA_CLUSTER_ADDRESS" }}"
 
 # Galera Synchronization Configuration
 wsrep_sst_method=rsync
@@ -39,8 +43,13 @@ wsrep_sst_method=rsync
 wsrep_node_address="{{ env "GALERA_NODE_ADDRESS" }}"
 wsrep_node_name="{{ env "GALERA_NODE_NAME" }}"
 EOL
-
 ```
+
+Create a config for the SQL commands that will create the phpMyAdmin tables.
+```bash
+curl -s https://raw.githubusercontent.com/phpmyadmin/phpmyadmin/master/resources/sql/create_tables.sql | docker config create pma_create_tables.sql -
+```
+
 ### Environment
 ```bash
 export GALERA_LABEL="yachts.swarm.galera"
@@ -60,16 +69,17 @@ do
 done
 ```
 
+Compile the list of peers to be passed to the galera nodes, and define the primary (bootstrapping) node.
 ```bash
 #!/bin/bash
 GALERA_NODE_IDS=($(docker node ls -q --filter node.label=$GALERA_LABEL=true | tr '\n' ' '))
 GALERA_PEER_LIST=""
-for i in "${!REDISRAFT_NODE_IDS[@]}"
+for i in "${!GALERA_NODE_IDS[@]}"
 do
   if [[ $i == 0 ]]
   then
     GALERA_PRIMARY_HOST="${GALERA_NODE_IDS[i]}.galera.host"
-    GALERA_PEER_LIST="gcomm://$GALERA_PRIMARY_HOST"
+    GALERA_PEER_LIST="$GALERA_PRIMARY_HOST"
   else
     GALERA_PEER_LIST="$GALERA_PEER_LIST,${GALERA_NODE_IDS[i]}.galera.host"
   fi
@@ -78,23 +88,105 @@ export GALERA_PRIMARY_HOST
 export GALERA_PEER_LIST
 ```
 
-## Compose
-
+Set the domain to use for phpMyAdmin.
 ```bash
-cat EOL << | docker stack deploy -c - galera
+export PHPMYADMIN_DOMAIN=mysql.example.com
+```
+
+### Root Password
+Create a [secret](/stacks/#secrets) containing the root password of the MariaDB database. Create another secret for the `pma` user.
+
+## Compose
+```bash
+cat << EOL | docker stack deploy -c - galera
 version: '3.8'
 
 services:
   node:
-    image: mariadb
-    environment
+    image: coryaent/mantle
+    hostname: "{{.Node.ID}}.galera.host"
+    environment:
       GALERA_NODE_ADDRESS: "{{.Node.ID}}.galera.host"
       GALERA_NODE_NAME: "{{.Node.Hostname}}_{{.Node.ID}}"
-      GALERA_CLUSTER_ADDRESS: $GALERA_PEER_LIST
+      GALERA_CLUSTER_NAME: Swarm.Yachts
+      GALERA_PRIMARY_HOST: $GALERA_PRIMARY_HOST
+      GALERA_CLUSTER_ADDRESS: "gcomm://$GALERA_PEER_LIST"
+      MARIADB_ROOT_PASSWORD_FILE: /run/secrets/galera_root_pw
+      MARIADB_DATABASE: phpmyadmin
+      MARIADB_USER: pma
+      MARIADB_PASSWORD_FILE: /run/secrets/phpmyadmin_db_pw
     configs:
       - source: galera_tmpl
         target: /etc/mysql/conf.d/galera.cnf
+      - source: pma_create_tables.sql
+        target: /docker-entrypoint-initdb.d/create_tables.sql
+    secrets:
+      - galera_root_pw
+      - phpmyadmin_db_pw
+    networks:
+      mysql:
+        aliases:
+          - mysql.host
+          - galera.host
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - "node.labels.$GALERA_LABEL == true"
+
+  phpmyadmin:
+    image: phpmyadmin
+    secrets:
+      - galera_root_pw
+      - phpmyadmin_db_pw
+      - phpmyadmin_pw
+    environment:
+      PMA_HOST: mysql.host
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD_FILE: /run/secrets/galera_root_pw
+      PMA_CONTROLHOST: mysql.host
+      PMA_CONTROLPORT: 3306
+      PMA_PMADB: phpmyadmin
+      PMA_CONTROLUSER: pma
+      PMA_CONTROLPASS_FILE: /run/secrets/phpmyadmin_db_pw
+    networks:
+      - www
+      - mysql
+    deploy:
+      labels:
+        caddy: $PHPMYADMIN_DOMAIN
+        caddy.reverse_proxy: http://phpmyadmin:80
+        caddy.basicauth.admin: JDJhJDE0JE84N2FBeDdlLmhWREZEeEVaTEcwc2VGSGlxLklKeHI0RU1oNlJBSXdUZFZBTFFNRXp4eWQyCg==
+      placement:
+        constraints:
+          - "node.role == worker"
+
+configs:
+  galera_tmpl:
+    external: true
+
+secrets:
+  galera_root_pw:
+    external: true
+  phpmyadmin_db_pw:
+    external: true
+  phpmyadmin_pw:
+    external: true
+
+networks:
+  mysql:
+    name: mysql
+    attachable: true
+    driver: overlay
+    driver_opts:
+      encrypted: "true"
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.251.0.0/16"
+  www:
+    external: true
 EOL
 ```
 
-## Bootstrap

@@ -2,7 +2,7 @@
 
 # Patroni
 
-[Patroni](https://patroni.readthedocs.io/en/latest/index.html) is a "template" for installing PostgreSQL databases in a high-availability situation. It uses a data store, such as etcd or Consul, to track the state of a Patroni cluster.
+[Patroni](https://patroni.readthedocs.io/en/latest/index.html) is a template for installing PostgreSQL databases in a high-availability situation. It uses a data store, such as etcd or Consul, to track the state of a Patroni cluster.
 
 Being a highly configurable system, Patroni and its related services require a comprably high amount of configuration. Many of these options can (and should) be stored as swarm configs. Some configuration values will also be set by environmental variables.
 
@@ -24,17 +24,16 @@ Local between the node and the proxy via TCP is handled by socat. Because of thi
 pgAdmin is a robust and featureful interface for the administration of PostgreSQL databases. It can store its own configuration in its own PostgreSQL database. This database will be created automatically upon the successful deployment of a Patroni cluster.
 
 ## Setup
-To start the deployment of a Patroni cluster, it is prudent to label the swarm nodes which will be used to store the data of the database. For example, add the label `com.example.patroni=true` to each node that will store the Patroni database.
+To start the deployment of a Patroni cluster, it is prudent to label the swarm nodes which will be used to store the data of the database. For example, add the label `yachts.swarm.patroni=true` to each node that will store the Patroni database.
 
 ## Secrets
-The recommended way to store secrets is with a password manager. [Bitwarden](https://bitwarden.com/) is one such program, and it is available at no cost.
-
 Secrets which need to be set include:
 
 - `postgres_admin_password`
 - `patroni_replication_password`
 - `patroni_superuser_password`
 - `pgadmin_default_password`
+- `pgadmin_configdb_password`
 
 Upon starting the Patroni cluster, a user `admin` will be craeted for purposes of creating other roles and databases. It is recommended to use this `admin` account when configuring pgAdmin. Logging in to the database as the superuser or replication user is *not* recommended.
 
@@ -109,11 +108,12 @@ EOL
 ```
 
 ### HAproxy
-Creating the config for HAproxy requires some manual steps.
+Creating the config for HAProxy can be done with some manual steps.
 
+#### Manual
 First, list the nodes labeled as Patroni database hosts.
 ```bash
-docker node ls --filter node.label=$PATRONI_LABEL=true
+docker node ls --filter node.label=${PATRONI_LABEL:?}=true
 ```
 
 Output should resemble the following.
@@ -126,34 +126,37 @@ aocaingaish5eepoh4aeTh9eo     worker-03   Ready     Active                      
 
 The compose file sets the hostname for the database based on the node ID. Both the ID and the hostname should be set in the HAproxy config. At the bottom, there are several lines starting with `server`. These are the hosts to which the proxy may direct incomming queries, depending on the status of the servers. Substitute the sample values below with the output of the above command.
 
-```
+#### Automatic
+Alternatively, HAProxy can be created automatically, so long as the environmental variable `PATRONI_LABEL` is set.
+
+```bash
+cat << EOL
 global
-    maxconn 384
+$(printf "\tmaxconn 384")
 
 defaults
-    log global
-    mode tcp
-    retries 2
-    timeout client 30m
-    timeout connect 4s
-    timeout server 30m
-    timeout check 5s
+$(printf "\tlog global")
+$(printf "\tmode tcp")
+$(printf "\tretries 2")
+$(printf "\ttimeout client 30m")
+$(printf "\ttimeout connect 4s")
+$(printf "\ttimeout server 30m")
+$(printf "\ttimeout check 5s")
 
 listen stats
-    mode http
-    bind *:7000
-    stats enable
-    stats uri /
+$(printf "\tmode http")
+$(printf "\tbind *:7000")
+$(printf "\tstats enable")
+$(printf "\tstats uri /")
 
 listen manning
-    bind /run/patroni/proxy.sock
-    bind *:5432
-    option httpchk
-    http-check expect status 200
-    default-server inter 2500ms fall 4 rise 2 on-marked-down shutdown-sessions
-    server worker-01 saeSh9chue6aoqu1ahv3Mah1t.patroni.host:15432 maxconn 128 check port 8008
-    server worker-02 Zoowou7een6aey9eici6Vaiz9.patroni.host:15432 maxconn 128 check port 8008
-    server worker-03 aocaingaish5eepoh4aeTh9eo.patroni.host:15432 maxconn 128 check port 8008
+$(printf "\tbind /run/patroni/proxy.sock")
+$(printf "\tbind *:5432")
+$(printf "\toption httpchk")
+$(printf "\thttp-check expect status 200")
+$(printf "\tdefault-server inter 2500ms fall 4 rise 2 on-marked-down shutdown-sessions")
+$(docker node ls --filter node.label=$PATRONI_LABEL=true --format "\tserver {{.Hostname}} {{.ID}}.patroni.host:15432 maxconn 128 check port 8008")
+EOL
 ```
 
 ### pgAdmin
@@ -161,10 +164,17 @@ To initialize the pgAdmin configuration store within the PostgreSQL database, th
 
 Create the config, an executable script in this case, which will initialize the pgAdmin database upon the bootstrapping of the Patroni cluster.
 ```bash
-cat << EOL | docker config create init_pgadmin_db -
+cat << EOL | docker config create --template-driver golang init_pgadmin_db -
 #!/bin/bash
-psql -d "\$1" -c "CREATE USER pgadmin WITH PASSWORD 'access';"
+psql -d "\$1" -c "CREATE USER pgadmin WITH PASSWORD '{{ secret "pgadmin_configdb_password" }}';"
 psql -d "\$1" -c "CREATE DATABASE pgadmin OWNER pgadmin;"
+EOL
+```
+
+Create a pgAdmin system configuration file to set the configuration storage database.
+```bash
+cat << EOL | docker config create --template-driver golang pgadmin_system.py
+CONFIG_DATABASE_URI = 'postgresql://pgadmin:{{ secret "pgadmin_configdb_password" }}@patroni.host:5432/pgadmin?sslmode=disable'
 EOL
 ```
 

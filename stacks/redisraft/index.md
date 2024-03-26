@@ -5,7 +5,7 @@ prev:
 ---
 
 # RedisRaft
-Redis is an in-memory storage for various data types. It includes support for sets, lists, simple key-value pairs, and hash maps. RedisRaft is an extension to redis that provides a strong-consistency deployment option.
+[Redis](https://redis.io/) is an in-memory storage for various data types. It includes support for sets, lists, simple key-value pairs, and hash maps. RedisRaft is an extension to Redis that provides a strong-consistency deployment option.
 
 Like with all raft clusters, an odd number of nodes should be deployed. Three to seven is recommended. A greater number of nodes increases the number of failures that the system can tolerate at the expense of speed.
 
@@ -29,6 +29,30 @@ do
 done
 ```
 
+## Config
+Create the swarm config template for the RedisRaft nodes. This allows passing the swarm node's ID to the Redis server. The ID, which is also set in the containers' hostname, is in turn advertised to the other servers.
+
+```bash
+cat << EOL | docker config create --template-driver golang redisraft_conf -
+# GENERAL OPTIONS
+dir /data
+bind 0.0.0.0
+
+# REDISRAFT REQUIREMENTS
+databases 1
+save ""
+dbfilename dump.rdb
+maxmemory-policy noeviction
+appendonly no
+cluster-enabled no
+loadmodule /redisraft.so
+
+# REDISRAFT OPTIONS
+raft.follower-proxy yes
+raft.addr {{.Node.ID}}.redisraft.host:6379
+EOL
+```
+
 ## Compose
 ```bash
 cat << EOL | docker stack deploy -c - redisraft
@@ -42,11 +66,9 @@ services:
       default:
         aliases:
           - redisraft.host
-    command: >
-      redis-server
-      --loadmodule /redisraft.so
-      --bind 0.0.0.0
-      --raft.follower-proxy yes
+    configs:
+      - redisraft_conf
+    command: redis-server /redisraft_conf
     volumes:
       - data:/data
     deploy:
@@ -58,6 +80,10 @@ services:
         reservations:
           cpus: '0.25'
           memory: 32M
+
+configs:
+  redisraft_conf:
+    external: true
 
 networks:
   default:
@@ -77,7 +103,7 @@ EOL
 Now that the stack is deployed, one must initialize the cluster and connect the other nodes. Clustering can be achieved by running a script or with a few manual steps.
 
 ### Automatic
-This script will automatically initialize a RedisRaft cluster on a primary node and connect each other node. Ensure that the `REDISRAFT_LABEL` variable is still set.
+This script will automatically initialize a RedisRaft cluster on a primary node and connect each other node. Ensure that the `REDISRAFT_LABEL` variable is still set, and that each RedisRaft node is running before running the script. The script can be run multiple times without issue.
 ```bash
 #!/bin/bash
 REDISRAFT_NODE_IDS=($(docker node ls -q --filter node.label=$REDISRAFT_LABEL=true | tr '\n' ' '))

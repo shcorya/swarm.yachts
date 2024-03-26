@@ -44,3 +44,78 @@ http    {
 }
 EOL
 ```
+## Compose
+```bash
+cat << EOL | docker stack deploy -c - cadvisor
+version: '3.8'
+services:
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    command: >
+      --storage_duration=5m0s
+      --logtostderr
+      --stderrthreshold=INFO
+      --allow_dynamic_housekeeping=true
+      --listen_ip="127.0.0.1"
+      --port=57832
+      --http_auth_file="/run/secrets/cadvisor_auth_file"
+      --http_auth_realm="Corya Enterprises, LLC"
+      --storage_driver="redis
+      --storage_driver_host="localhost:24967"
+    secrets:
+      - cadvisor_auth_file
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - public
+    deploy:
+      mode: global
+
+  storage:
+    image: redis
+    command: >
+      redis-server
+      --bind 127.0.0.1
+      --port 24967
+    networks:
+      - public
+    volumes:
+      - data:/data
+    deploy:
+      mode: global
+
+  ui-proxy:
+    image: nginx
+    networks:
+      - public
+    environment:
+      LISTEN_PORT: 8080
+      SSL_CERT_PATH: /run/secrets/default_ssl_cert
+      SSL_KEY_PATH: /run/secrets/default_ssl_key
+      TARGET: "http://127.0.0.1:57832"
+    configs:
+      - source: cadvisor_nginx_tmpl
+        target: /etc/nginx/nginx.conf
+    secrets:
+      - default_ssl_cert
+      - default_ssl_key
+    deploy:
+      mode: global
+
+configs:
+  cadvisor_nginx_tmpl:
+    external: true
+
+networks:
+  public:
+    external: true
+    name: host
+
+volumes:
+  data
+    driver: local
+EOL
+```

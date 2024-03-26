@@ -30,8 +30,8 @@ cat << EOL | docker config create --template-driver golang glauth_conf -
 EOL
 ```
 
-### PostgreSQL Database
-Create a new database on the PostgreSQL instance. This can be done with pgAdmin or `psql`.
+### MariaDB Database
+Create a new database on the MariaDB cluster. This can be done with phpMyAdmin.
 
 ## Compose
 ```bash

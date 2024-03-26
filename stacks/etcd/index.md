@@ -6,8 +6,6 @@
 ## Discovery
 To employ automatic bootstrapping, one needs a unique URL from an existing etcd cluster. A service for the bootstrapping process been made publicly available. This service will be utilized within the compose file. More information about etcd discovery can be found [here](https://etcd.io/docs/v3.5/op-guide/clustering/#discovery).
 
-Note the size parameter passed to the URL. Raft clusters should generally contain three, five, or seven nodes. The compose file in this guide will assume a cluster size of three.
-
 ## Setup
 Setup for etcd is similar to RedisRaft.
 
@@ -31,10 +29,15 @@ done
 ```
 
 ## Tuning
-Depending on the geographical distribution of the etcd nodes, etcd may need to be tuned. More information is available [here](https://etcd.io/docs/v3.5/tuning/). The compose file below uses the default values for heartbeat interval and election timeout.
+Depending on the geographical distribution of the etcd nodes, etcd may need to be tuned. More information is available [here](https://etcd.io/docs/v3.5/tuning/). The compose file below uses values which should work with a globally distributed environment.
 
 ## Web UI
 It may be useful to visualize etcd keys without the need to run `etcdctl` from the command line. The compose file includes a browser which can be accessed with a web interface. Take care to edit the `caddy` label and add [basic authentication](https://swarm.yacts/stacks/caddy/#basic-authentication).
+
+Set a CNAME record and define the domain for the compose file.
+```bash
+export ETCD_WEB_DOMAIN=etcd.example.com
+```
 
 ## Compose
 ```bash
@@ -58,9 +61,8 @@ services:
       ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
       ETCD_ADVERTISE_CLIENT_URLS: "http://{{.Node.ID}}.etcd.host:2379"
       ETCD_INITIAL_ADVERTISE_PEER_URLS: "http://{{.Node.ID}}.etcd.host:2380"
-      ETCD_HEARTBEAT_INTERVAL: 100
-      ETCD_ELECTION_TIMEOUT: 1000
-
+      ETCD_HEARTBEAT_INTERVAL: 300
+      ETCD_ELECTION_TIMEOUT: 3000
     volumes:
       - data:/data
     deploy:
@@ -88,8 +90,9 @@ services:
         constraints:
           - "node.role == worker"
       labels:
-        caddy: etcd.example.com
+        caddy: $ETCD_WEB_DOMAIN
         caddy.reverse_proxy: http://browser.etcd.host:8081
+        caddy.basicauth.admin: JDJhJDE0JFRhMml0eE8wZDVEcVhwWloxbFJYbmV3V21kTFV5QnpxRzVhZmpTbUNXclpkLi51OHprdVl5Cg==
 
 networks:
   www:
