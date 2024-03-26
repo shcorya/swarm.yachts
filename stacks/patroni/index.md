@@ -178,6 +178,11 @@ CONFIG_DATABASE_URI = 'postgresql://pgadmin:{{ secret "pgadmin_configdb_password
 EOL
 ```
 
+Set the default email which will be used to login to pgAdmin.
+```bash
+export PGADMIN_DEFAULT_EMAIL=me@example.com
+```
+
 ## Compose
 ```bash
 cat << EOL | docker stack deploy -c - patroni
@@ -267,12 +272,14 @@ services:
   pgadmin:
     image: dpage/pgadmin4
     environment:
-      PGADMIN_DEFAULT_EMAIL: stephen@corya.co
-      PGADMIN_DEFAULT_PASSWORD_FILE: /run/secrets/pgadmin_default_password_2
-      PGADMIN_CONFIG_CONFIG_DATABASE_URI: "'postgresql://pgadmin:access@patroni.host:5432/pgadmin?sslmode=disable'"
+      PGADMIN_DEFAULT_EMAIL: $PGADMIN_DEFAULT_EMAIL
+      PGADMIN_DEFAULT_PASSWORD_FILE: /run/secrets/pgadmin_default_password
       PGADMIN_LISTEN_ADDRESS: 0.0.0.0
       PGADMIN_CONFIG_PROXY_X_HOST_COUNT: 1
       PGADMIN_CONFIG_MAX_LOGIN_ATTEMPTS: 0
+    configs:
+      - source: pgadmin_system.py
+        target: /etc/pgadmin/config_system.py
     secrets:
       - pgadmin_default_password
     networks:
@@ -296,6 +303,8 @@ configs:
 
 secrets:
   pgadmin_default_password:
+    external: true
+  pgadmin_system.py:
     external: true
   patroni_replication_password:
     external: true
