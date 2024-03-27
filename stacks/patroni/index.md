@@ -108,26 +108,7 @@ EOL
 ```
 
 ### HAproxy
-Creating the config for HAProxy can be done with some manual steps.
-
-#### Manual
-First, list the nodes labeled as Patroni database hosts.
-```bash
-docker node ls --filter node.label=${PATRONI_LABEL:?}=true
-```
-
-Output should resemble the following.
-```
-ID                            HOSTNAME    STATUS    AVAILABILITY   MANAGER STATUS   ENGINE VERSION
-saeSh9chue6aoqu1ahv3Mah1t     worker-01   Ready     Active                          25.0.3
-Zoowou7een6aey9eici6Vaiz9     worker-02   Ready     Active                          25.0.3
-aocaingaish5eepoh4aeTh9eo     worker-03   Ready     Active                          25.0.3
-```
-
-The compose file sets the hostname for the database based on the node ID. Both the ID and the hostname should be set in the HAproxy config. At the bottom, there are several lines starting with `server`. These are the hosts to which the proxy may direct incomming queries, depending on the status of the servers. Substitute the sample values below with the output of the above command.
-
-#### Automatic
-Alternatively, HAProxy can be created automatically, so long as the environmental variable `PATRONI_LABEL` is set.
+The compose file sets the hostname for the database based on the node ID. Both the ID and the hostname should be set in the HAproxy config. At the bottom, there are several lines starting with `server`. These are the hosts to which the proxy may direct incomming queries, depending on the status of the servers. Substitute the sample values below with the output of the above command. The HAProxy config can be created programatically, so long as the environmental variable `PATRONI_LABEL` is set.
 
 ```bash
 cat << EOL
