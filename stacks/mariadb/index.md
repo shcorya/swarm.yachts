@@ -51,13 +51,14 @@ curl -s https://raw.githubusercontent.com/phpmyadmin/phpmyadmin/master/resources
 ```
 
 ### Environment
+Define the label to apply to the Galera nodes.
 ```bash
 export GALERA_LABEL="yachts.swarm.galera"
 ```
 
-Select which nodes will run MariaDB.
+Select which nodes will run MariaDB, for example `worker-01 worker-02 worker-03`.
 ```bash
-export GALERA_NODES=(worker-01 worker-02 worker-03)
+read -a GALERA_NODES -p "Enter the array of Galera nodes (space-seperated): "
 ```
 
 Apply the label to the selected nodes.
@@ -95,6 +96,13 @@ export PHPMYADMIN_DOMAIN=mysql.example.com
 
 ### Root Password
 Create a [secret](/stacks/#secrets) containing the root password of the MariaDB database. Create another secret for the `pma` user.
+
+### Basic Authentication
+It is imperative that one sets an authentication requirement for phpMyAdmin.
+```bash
+PMA_BASIC_AUTH=$(caddy hash-password | base64 -w 0)
+```
+In the compose file below, the username will be set to `admin`.
 
 ## Compose
 ```bash
@@ -157,7 +165,7 @@ services:
       labels:
         caddy: $PHPMYADMIN_DOMAIN
         caddy.reverse_proxy: http://phpmyadmin:80
-        caddy.basicauth.admin: JDJhJDE0JE84N2FBeDdlLmhWREZEeEVaTEcwc2VGSGlxLklKeHI0RU1oNlJBSXdUZFZBTFFNRXp4eWQyCg==
+        caddy.basicauth.admin: $PMA_BASIC_AUTH
       placement:
         constraints:
           - "node.role == worker"

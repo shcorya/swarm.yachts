@@ -1,4 +1,4 @@
-*This stack depends on cron.*
+*This stack depends on cron. It is also more of an "example" than a "tutorial". Knowledge of compiling docker images will be necessary if one does not happen to be using Gandi DNS.*
 
 # Certbot
 Certbot is a program that handles the creation and renewal of Let's Encrypt certificates. Using this stack does not require any open ports.
@@ -47,15 +47,15 @@ x-certbot-common: &certbot-common
   secrets:
     - gandi_certbot_ini
   volumes:
-    - localcerts:/etc/letsencrypt/
+    - certs:/etc/letsencrypt/
   environment:
     CERTBOT_EMAIL: username@example.com
     CERTBOT_AUTHENTICATOR: dns-gandi
     CERTBOT_GANDI_CREDENTIALS_FILE: /run/secrets/gandi_certbot_ini
-    CERTBOT_DOMAINS: "{{.Node.Hostname}}.example.com"
+    CERTBOT_DOMAINS: "*.example.com"
 
 services:
-  initialize:
+  init:
     <<: *certbot-common
     command: certonly --agree-tos -n
     configs:
@@ -79,19 +79,48 @@ services:
       restart_policy:
         condition: none
 
+  sync:
+    image: coryaent/favre
+    hostname: "{{.Service.Name}}.{{.Task.Slot}}.{{.Task.ID}}"
+    secrets:
+      - favre_key
+    environment:
+      CSYNC2_KEY_FILE: /run/secrets/favre_key
+      CSYNC2_INCLUDE: /sync
+      FAVRE_TASKS_ENDPOINT: "tasks.{{.Service.Name}}."
+    networks:
+      - sync
+    volumes:
+      - sync_state:/var/lib/csync2/
+      - certs:/sync/
+    deploy:
+      mode: global
+      endpoint_mode: dnsrr
+
 configs:
   certbot_init_ini:
     external: true
   certbot_renew_ini:
     external: true
 
+networks:
+  sync:
+    attachable: false
+    driver: overlay
+    driver_opts:
+      encrypted: "true"
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.250.0.0/16"
+
 secrets:
   gandi_certbot_ini:
     external: true
 
 volumes:
-  localcerts:
+  certs:
     driver: local
-    name: localcerts
+    name: certs
 
 ```

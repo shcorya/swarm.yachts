@@ -16,14 +16,14 @@ For additional sites, a CNAME record should be set, pointing to the reverse prox
 In order to confirm that the Caddy setup works, `whoami.example.com` is set in the compose file. The `traefik/whoami` image is a simple web server which shows some useful information.
 
 ## Environment Setup
-Several environment variables need to be set to deploy Caddy properly. First, set up an "ingress" label. This can be change to reflect the user's domain. If the domain is `example.com`, perhaps use `com.example.swarm.ingress`.
+Several environment variables need to be set to deploy Caddy properly. First, set up an "ingress" label. This can be changed to reflect the your domain. If the domain is `example.com`, perhaps use `com.example.swarm.ingress`.
 ```bash
 export CADDY_INGRESS_LABEL="yachts.swarm.ingress"
 ```
 
 Define an array of nodes which will host the reverse proxy.
 ```bash
-export CADDY_PROXY_NODES=(worker-01 worker-02 worker-03)
+read -a CADDY_PROXY_NODES -p "Enter the Caddy proxy node array (space-seperated): "
 ```
 
 Run this script to apply the label to each node.
@@ -35,8 +35,8 @@ do
   $CADDY_INGRESS_LABEL=true ${CADDY_PROXY_NODES[i]}
 done
 ```
----
-Set the `CADDY_INGRESS_DOMAIN` variable to the domain of the A records that were setup previously.
+
+Set the `CADDY_INGRESS_DOMAIN` variable to the domain of the A records that were setup previously. Changing this domain is imperative.
 ```bash
 export CADDY_INGRESS_DOMAIN="swarm.example.com"
 ```
@@ -79,8 +79,6 @@ EOF
 Other configuration options can be set by swarm labels.
 
 ## Compose
-The `*.example.com` domains should be changed to reflect the user's requirements.
-
 ```bash
 cat << EOL | docker stack deploy -c - caddy
 version: '3.7'
@@ -112,7 +110,7 @@ services:
         published: 443
         mode: host
     extra_hosts:
-      - "node.docker.host:host-gateway"
+      - "node.swarm.docker.host:host-gateway"
     networks:
       - www
       - control

@@ -9,7 +9,7 @@ Being a highly configurable system, Patroni and its related services require a c
 The setup detailed below configures one synchronous and one asyncronous replica. If one of the syncronous replicas goes offline, the asyncronous replica takes over as the syncronous replica. This setup creates a balance between strong consistency and availability.
 
 ## Services
-Successful deployment of Patroni depends on sereval services. In general, the database stores data on the designated nodes, the proxy and socat route queries, and pgAdmin provides a convienint, visual means of administering roles and databases.
+Successful deployment of Patroni depends on sereval services. In general, the database stores data on the designated nodes, the proxy and socat route queries, and pgAdmin provides a convienint, visual means of administering roles and databases. This stack creates a service running on each swarm node which allows accessing PostgreSQL through HAProxy on each local host.
 
 ### Database
 The storage of data is handled by a wrapper around PostgreSQL. This service communicates with etcd to determine which node is the master, and HAproxy queries the status of the running tasks of this service to properly route queries.
@@ -33,13 +33,12 @@ Secrets which need to be set include:
 - `patroni_replication_password`
 - `patroni_superuser_password`
 - `pgadmin_default_password`
-- `pgadmin_configdb_password`
 
 Upon starting the Patroni cluster, a user `admin` will be craeted for purposes of creating other roles and databases. It is recommended to use this `admin` account when configuring pgAdmin. Logging in to the database as the superuser or replication user is *not* recommended.
 
-See [Secrets](/stacks/#secrets) for a method to securely create secrets from the command line.
+See [Secrets](/stacks/#secrets) for a method to securely create secrets.
 
-## Configs
+## Configuration
 The Patroni stack requires several configuration files. Templates will be utilized to reference secret values within configs.
 
 ### Dynamic Configuration Settings
@@ -108,8 +107,9 @@ EOL
 ```
 
 ### HAproxy
-The compose file sets the hostname for the database based on the node ID. Both the ID and the hostname should be set in the HAproxy config. At the bottom, there are several lines starting with `server`. These are the hosts to which the proxy may direct incomming queries, depending on the status of the servers. Substitute the sample values below with the output of the above command. The HAProxy config can be created programatically, so long as the environmental variable `PATRONI_LABEL` is set.
+The compose file sets the hostname for the database based on the node ID. Both the ID and the hostname should be set in the HAproxy config. At the bottom, there are several lines starting with `server`. These are the hosts to which the proxy may direct incomming queries, depending on the status of the servers.
 
+The HAProxy config can be created programatically, so long as the environmental variable `PATRONI_LABEL` is set.
 ```bash
 cat << EOL
 global
@@ -140,28 +140,33 @@ $(docker node ls --filter node.label=$PATRONI_LABEL=true --format "\tserver {{.H
 EOL
 ```
 
+Set the domain where the status page for HAProxy can be accessed.
+```bash
+export PATRONI_STATUS_DOMAIN="status.patroni.example.com"
+```
+
+Create a
+
 ### pgAdmin
 To initialize the pgAdmin configuration store within the PostgreSQL database, the following script is run after database initialization. As this service will only be accessible behind the Caddy reverse proxy, the security of the password is less important than this stack's secrets.
 
 Create the config, an executable script in this case, which will initialize the pgAdmin database upon the bootstrapping of the Patroni cluster.
 ```bash
-cat << EOL | docker config create --template-driver golang init_pgadmin_db -
+cat << EOL | docker config create init_pgadmin_db -
 #!/bin/bash
-psql -d "\$1" -c "CREATE USER pgadmin WITH PASSWORD '{{ secret "pgadmin_configdb_password" }}';"
+psql -d "\$1" -c "CREATE USER pgadmin WITH PASSWORD 'access';"
 psql -d "\$1" -c "CREATE DATABASE pgadmin OWNER pgadmin;"
-EOL
-```
-
-Create a pgAdmin system configuration file to set the configuration storage database.
-```bash
-cat << EOL | docker config create --template-driver golang pgadmin_system.py
-CONFIG_DATABASE_URI = 'postgresql://pgadmin:{{ secret "pgadmin_configdb_password" }}@patroni.host:5432/pgadmin?sslmode=disable'
 EOL
 ```
 
 Set the default email which will be used to login to pgAdmin.
 ```bash
-export PGADMIN_DEFAULT_EMAIL=me@example.com
+export PGADMIN_DEFAULT_EMAIL="me@example.com"
+```
+
+Additionally, set the domain by which pgAdmin will be accessed.
+```bash
+export PGADMIN_ACCESS_DOMAIN="pgadmin.patroni.example.com"
 ```
 
 ## Compose
@@ -240,7 +245,7 @@ services:
       - /run/patroni:/run/patroni
     deploy:
       labels:
-        caddy: status.patroni.corya.enterprises
+        caddy: $PATRONI_STATUS_DOMAIN
         caddy.reverse_proxy: http://patroni.host:7000
         caddy.basicauth.admin: JDJhJDE0JHZlYUFnci56NzV4ZDZDcmdjSXZMeU9scmVNVndmRTdkVWFiWjVoQkFPbUJ5WlZsL2lIL1BpCg==
       mode: global
@@ -255,12 +260,10 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: $PGADMIN_DEFAULT_EMAIL
       PGADMIN_DEFAULT_PASSWORD_FILE: /run/secrets/pgadmin_default_password
+      PGADMIN_CONFIG_CONFIG_DATABASE_URI: "'postgresql://pgadmin:access@patroni.host:5432/pgadmin?sslmode=disable'"
       PGADMIN_LISTEN_ADDRESS: 0.0.0.0
       PGADMIN_CONFIG_PROXY_X_HOST_COUNT: 1
       PGADMIN_CONFIG_MAX_LOGIN_ATTEMPTS: 0
-    configs:
-      - source: pgadmin_system.py
-        target: /etc/pgadmin/config_system.py
     secrets:
       - pgadmin_default_password
     networks:
@@ -268,7 +271,7 @@ services:
       - postgres
     deploy:
       labels:
-        caddy: pgadmin.patroni.corya.enterprises
+        caddy: $PGADMIN_ACCESS_DOMAIN
         caddy.reverse_proxy: http://pgadmin:80
       placement:
         constraints:
@@ -284,8 +287,6 @@ configs:
 
 secrets:
   pgadmin_default_password:
-    external: true
-  pgadmin_system.py:
     external: true
   patroni_replication_password:
     external: true

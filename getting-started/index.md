@@ -10,18 +10,22 @@ Docker swarm is an orchestration tool for docker containers. It is backed by a s
 ## About This Guide
 One should take care to read the additional documentation [Stacks page](/stacks/). This guide assumes that the reader has basic knowledge of the command line, installing packages, provisioning virtual private servers, and setting DNS records.
 
+The Compose files are entered as simple bash commands so that they may be easily copied into the terminal and executed, without needing to save any files. In order to modify these Compose files, copy only the `yaml` portion into a new file, and then run `docker stack deploy -c /path/to/my/compose.yml my-stack-name`.
+
+It is hoped that this guide will serve as a succicient introduction to Docker Swarm, as well as a complete tutorial for the implementation of a robust, fault-tolerant, distributed system. Vertically scaling each VPS or dedicated server should be straightforward.
+
 ## Basic Node Provisioning
 At least six servers (three managers and three workers) are required to deploy docker swarm effectively. Root access on each of the servers is required. The servers will cost from $100 to $400 per year depending on which provider you choose. RackNerd is recommended. One can get started with six nodes hosted by RackNerd about $100, which will be charged on an annual basis.
 
 Having at least three managers is essential for high availability. From the [official docs](https://docs.docker.com/engine/swarm/admin_guide/#add-manager-nodes-for-fault-tolerance):
 > You should maintain an odd number of managers in the swarm to support manager node failures. Having an odd number of managers ensures that during a network partition, there is a higher chance that the quorum remains available to process requests if the network is partitioned into two sets. Keeping the quorum is not guaranteed if you encounter more than two network partitions.
 
-Recommended minimum specifications for [manager nodes](https://my.racknerd.com/cart.php?a=confproduct&i=1):
+Recommended minimum specifications for [manager nodes](https://my.racknerd.com/cart.php?a=add&pid=695):
 - 1 vCPU
 - 10 GB SSD storage
 - 768 MB RAM
 
-For [worker nodes](https://my.racknerd.com/cart.php?a=confproduct&i=2):
+For [worker nodes](https://my.racknerd.com/cart.php?a=add&pid=681):
 - 2 vCPU
 - 25 GB SSD storage
 - 2 GB RAM
@@ -30,7 +34,7 @@ As implied by the names, the worker nodes will do most of the computation. The m
 
 Note: managers can also be workers, although this is not recommended for production deployments. Deploying more than a few stacks at a time could excessively tax a machine's resources. Overloading management nodes can result in degredation of the entire swarm.
 
-Install Linux on each of the VPS's. This guide assumes Debian has been installed on each host.
+Install Linux on each of the VPS's. This guide assumes Debian has been installed on each host. Set the hostnames to something descriptive, for example `manager-01`, `worker-02`, etc.
 
 ## Setting DNS Records
 Create a DNS A record for each of your new machines. Then, set another A record which is the same domain name pointing to the three worker nodes. For example, if your worker IP's are `1.2.3.4`, `3.4.5.6`, and `5.6.7.8`, create the following A records:
@@ -46,6 +50,8 @@ Open a secure shell to each of your managers and workers and run (as root):
 ```bash
 curl -s https://get.docker.com | bash
 ```
+
+It will also be handy to install [Caddy](https://caddyserver.com/docs/install#static-binaries) on your local machine, as well as the managers. Make sure that it does *not* run as a system service. The binary can be used to hash passwords, but the server will be run using a Swarm Stack.
 
 ## Initialization
 Then, on a manager node, run:
@@ -66,13 +72,25 @@ To add a manager to this swarm, run 'docker swarm join-token manager' and follow
 
 Run the above, specified command on each worker.
 
-Then run a similar command on one of the managers:
+Then run this command on one of the managers.
 ```bash
 docker swarm join-token manager
 ```
 
-The output will be similar. Run the `docker swarm join` command with the manager token on each of the other managers.
+The output will similarly output a token to join the swarm. Run the `docker swarm join` command with the manager token on each of the other managers.
 
 Running `docker node ls` on a manager node should show that all six nodes are now a part of the newly created swarm.
 
 More information about [initializing a swarm](https://docs.docker.com/reference/cli/docker/swarm/init/) and [joining nodes](https://docs.docker.com/reference/cli/docker/swarm/join/) can be found in the official documentation.
+
+## Listing Nodes
+With three managers and three workers, running `docker node ls` should output something resembling the following.
+```
+ID                            HOSTNAME      STATUS    AVAILABILITY   MANAGER STATUS   ENGINE VERSION
+aZohnao5Eem2vafaeTh1ohgh5 *   manager-01    Ready     Active         Leader           25.0.3
+dovei3zou4eiJai6fu3uraefo     manager-02    Ready     Active         Reachable        25.0.3
+ouChaGh1phe1ahmail2ieT6ei     manager-03    Ready     Active         Reachable        25.0.3
+saeSh9chue6aoqu1ahv3Mah1t     worker-01     Ready     Active                          25.0.3
+Zoowou7een6aey9eici6Vaiz9     worker-02     Ready     Active                          25.0.3
+aocaingaish5eepoh4aeTh9eo     worker-03     Ready     Active                          25.0.3
+```

@@ -15,9 +15,9 @@ Label the nodes that will store RedisRaft data (you may wish to change `yachts.s
 export REDISRAFT_LABEL="yachts.swarm.redisraft"
 ```
 
-Select which nodes will run RedisRaft.
+Select which nodes will run RedisRaft, for example `worker-01 worker-02 worker-03`.
 ```bash
-export REDISRAFT_NODES=(worker-01 worker-02 worker-03)
+read -a REDISRAFT_NODES -p "Enter the RedisRaft node array (space-seperated): "
 ```
 
 Apply the label to the selected nodes.
@@ -103,7 +103,7 @@ EOL
 Now that the stack is deployed, one must initialize the cluster and connect the other nodes. Clustering can be achieved by running a script or with a few manual steps.
 
 ### Automatic
-This script will automatically initialize a RedisRaft cluster on a primary node and connect each other node. Ensure that the `REDISRAFT_LABEL` variable is still set, and that each RedisRaft node is running before running the script. The script can be run multiple times without issue.
+This script will automatically initialize a RedisRaft cluster on a primary node and connect each other node. Ensure that the `REDISRAFT_LABEL` variable is still set, and that *each RedisRaft node is running* before running the script. The script can be run multiple times without issue.
 ```bash
 #!/bin/bash
 REDISRAFT_NODE_IDS=($(docker node ls -q --filter node.label=$REDISRAFT_LABEL=true | tr '\n' ' '))
