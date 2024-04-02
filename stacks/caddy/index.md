@@ -2,7 +2,7 @@
 
 # Caddy
 
-Caddy is an open-source web server that supports automatic, signed SSL/TLS certificate fetching. It can be administered while running allowing for near-zero downtime configuration changes. It can be used as a reverse proxy for Docker Swarm.
+[Caddy](https://caddyserver.com/) is an open-source web server that supports automatic, signed SSL/TLS certificate fetching. It can be administered while running allowing for near-zero downtime configuration changes. It can be used as a reverse proxy for Docker Swarm.
 
 Leveraging work from [Lucas Lorentz](https://github.com/lucaslorentz) and his [Caddy-Docker-Proxy](https://github.com/lucaslorentz/caddy-docker-proxy) plugin, Caddy can be configured on-the-fly with Swarm labels. The [Caddy-Docker-Proxy](https://github.com/lucaslorentz/caddy-docker-proxy) README contains extensive documentation and many examples.
 

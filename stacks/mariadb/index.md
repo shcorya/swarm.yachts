@@ -100,13 +100,17 @@ Create a [secret](/stacks/#secrets) containing the root password of the MariaDB 
 ### Basic Authentication
 It is imperative that one sets an authentication requirement for phpMyAdmin.
 ```bash
-PMA_BASIC_AUTH=$(caddy hash-password | base64 -w 0)
+PMA_BASIC_AUTH_PW=$(caddy hash-password | base64 -w 0)
 ```
-In the compose file below, the username will be set to `admin`.
+In the compose file below, the username will be set to `admin` by default. This can be changed by setting the environment variable `PMA_BASIC_AUTH_USER`.
 
 ## Compose
 ```bash
-cat << EOL | docker stack deploy -c - galera
+#!/bin/bash
+run () {
+if { [ -z $PHPMYADMIN_DOMAIN ] || [[ $PHPMYADMIN_DOMAIN == *"example.com" ]] }; then echo "PHPMYADMIN_DOMAIN must be set" && return; fi
+if [ -z $PMA_BASIC_AUTH_PW ]; then echo "PMA_BASIC_AUTH_PW must be set" && return; fi
+cat << EOL | docker stack deploy -c - galera --detach=false
 version: '3.8'
 
 services:
@@ -165,7 +169,7 @@ services:
       labels:
         caddy: $PHPMYADMIN_DOMAIN
         caddy.reverse_proxy: http://phpmyadmin:80
-        caddy.basicauth.admin: $PMA_BASIC_AUTH
+        caddy.basicauth.${PMA_BASIC_AUTH_USER:=admin}: $PMA_BASIC_AUTH_PW
       placement:
         constraints:
           - "node.role == worker"
@@ -196,5 +200,7 @@ networks:
   www:
     external: true
 EOL
+}
+run
 ```
 
