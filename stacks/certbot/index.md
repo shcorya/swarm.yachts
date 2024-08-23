@@ -1,10 +1,12 @@
 *This stack depends on cron.*
 
+**This is the most involved and difficult stack in this guide. It is necessary if one wants to access swarm services from outside the swarm outside of HTTP(S) ports 80 or 443.**
+
 # Certbot
 [Certbot](https://certbot.eff.org/) is a program that handles the creation and renewal of Let's Encrypt certificates. Using this stack does not require any open ports; it relies on `DNS-01` challenges. Using the `DNS-01` ACME challenge has some advantages. One is that there is no need to open ports on any hosts. Another is that wildcard certificates can be obtained. These advantages will greatly ease the creation of secure swarm services.
 
 ## Custom Images
-The image [coryaent/cypert](https://github.com/coryaent/cypert) includes all the [Electronic Frontier Foundation DNS plugins](https://eff-certbot.readthedocs.io/en/stable/using.html#dns-plugins) plus [Gandi LiveDNS](https://github.com/obynio/certbot-plugin-gandi), [cPanel](https://github.com/badjware/certbot-dns-cpanel), and [DirectAdmin](https://github.com/cybercinch/certbot-dns-directadmin). Depending on the your DNS provider(s), it may be necessary to install one or more other plugins. The below Dockerfile demonstrates the installation of the aforementioned Gandi plugin. Additional plugins may be found on [GitHub](https://github.com/search?q=certbot%20plugin&type=repositories).
+The [coryaent/cypert](https://hub.docker.com/r/coryaent/cypert) image includes all the [Electronic Frontier Foundation DNS plugins](https://eff-certbot.readthedocs.io/en/stable/using.html#dns-plugins) plus [Gandi LiveDNS](https://github.com/obynio/certbot-plugin-gandi), [cPanel](https://github.com/badjware/certbot-dns-cpanel), and [DirectAdmin](https://github.com/cybercinch/certbot-dns-directadmin). Depending on the your DNS provider(s), it may be necessary to install one or more other plugins. The below Dockerfile demonstrates the installation of the aforementioned Gandi plugin. Additional plugins may be found on [GitHub](https://github.com/search?q=certbot%20plugin&type=repositories).
 
 ```Dockerfile
 FROM python:alpine
@@ -25,7 +27,7 @@ One base config template can be adapted for each of the EFF plugins. Create such
 cat << EOL | docker config create --template-driver golang certbot_eff_ini -
 email = {{ env "CERTBOT_EMAIL" }}
 dns-{{ env "CERTBOT_DNS_PROVIDER" }}-credentials = {{ env "CERTBOT_CREDENTIAL_FILE" }}
-env {{ "CERTBOT_DOMAINS" }}
+{{ env "CERTBOT_DOMAINS" }}
 EOL
 ```
 
@@ -85,7 +87,7 @@ if { [[ $CERTBOT_DNS_PROVIDER != "eff" ]] || \
      [[ $CERTBOT_DNS_PROVIDER != "community" ]] || \
      [[ $CERTBOT_DNS_PROVIDER != "cpanel" ]] }; then echo "Invalid CERTBOT_PROVIDER" && return; fi
 if { [ -z $CERTBOT_TLD ] || [[ $CERTBOT_TLD == *"example.com" ]] }; then echo "CERTBOT_TLD must be set" && return; fi
-cat << EOL | docker stack deploy -c - certebot --detach=false
+cat << EOL | docker stack deploy -c - certebot --detach=true
 version: '3.8'
 
 x-certbot-common: &certbot-common
@@ -112,6 +114,12 @@ services:
       CERTBOT_DOMAINS: "domains = *.$CERTBOT_TLD"
     deploy:
       mode: replicated-job
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints:
+          - "node.role == worker"
 
   renew:
     <<: *certbot-common
@@ -146,6 +154,8 @@ services:
 
 configs:
   certbot_${CERTBOT_DNS_PROVIDER}_ini:
+    external: true
+  favre_key:
     external: true
 
 secrets:

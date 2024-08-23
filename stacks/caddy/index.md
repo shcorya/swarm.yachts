@@ -80,7 +80,7 @@ Other configuration options can be set by swarm labels.
 
 ## Compose
 ```bash
-cat << EOL | docker stack deploy -c - caddy
+cat << EOL | docker stack deploy -c - caddy --detach=true
 version: '3.7'
 x-common-env: &common-env
   CADDY_CONTROLLER_NETWORK: 10.201.200.0/24
@@ -110,7 +110,7 @@ services:
         published: 443
         mode: host
     extra_hosts:
-      - "node.swarm.docker.host:host-gateway"
+      - "node.docker.host:host-gateway"
     networks:
       - www
       - control

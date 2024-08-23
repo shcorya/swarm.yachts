@@ -32,6 +32,11 @@ printf $MY_SECRET | docker secret create my_example_secret - && \
 unset MY_SECRET
 ```
 
+In order to create a random secret, such as a secure password, the below command can be used. Note that this command will not print the newly created secret's ID to the console; the value printed to the console is your new, pseudorandom secret.
+```bash
+pwgen 24 1 | tee /dev/stderr | docker secret create my_example_secret - > /dev/null
+```
+
 ## Networks
 Docker supports six network types, called drivers. The network drivers most used in this guide are "host" and "overlay".
 

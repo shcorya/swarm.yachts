@@ -10,7 +10,7 @@ MariaDB supports multiple replication modes, each having advantages and disadvan
 Asnchronous replication does not require replicas to confirm SQL transactions before the query result is sent to the client. This improves performance as only a single server needs to communicate with the client at a time, but provides no guarantee of consistency among the various nodes. Within the context of MariaDB, this mode is also called [Standard Replication](https://mariadb.com/kb/en/replication-overview/#standard-replication).
 
 ### Semisynchronous Replication
-Semisynchronous replication is effectively the same replication mode deployed on the [Patroni](/stacks/patroni). The master server only waits for one replica to acknowledge a write before returning the result to the client.
+In semischronous replication, the master server only waits for a subset of replicas to acknowledge a write before returning the result to the client. Often, the master waits for a single replica.
 
 ### Synchronous Replication
 Synchronous replication for MariaDB is achieved by using [Galera Cluster](https://galeracluster.com/library/documentation/overview.html#:~:text=This%20approach%20is%20also%20called,thus%20asynchronously%20on%20each%20node.&text=Galera%20Cluster%20provides%20a%20significant,availability%20for%20the%20MySQL%20system.). Within a Galera Cluster, nodes communicate and coordinate using the raft protocol (the same protocol used by etcd and RedisRaft.) Each node is aware of which node is the primary, and all reads and writes happen on the primary node. This mode provides the strongest consistency guarantee.
@@ -94,8 +94,17 @@ Set the domain to use for phpMyAdmin.
 export PHPMYADMIN_DOMAIN=mysql.example.com
 ```
 
-### Root Password
-Create a [secret](/stacks/#secrets) containing the root password of the MariaDB database. Create another secret for the `pma` user.
+### Root and phpMyAdmin Passwords
+Create a [secret](/stacks/#secrets) containing the root password of the MariaDB database.
+
+```bash
+pwgen 24 1 | docker secret create galera_root_pw -
+```
+
+Create another secret for the `pma` user.
+```bash
+pwgen 24 1 | docker secret create phpmyadmin_db_pw -
+```
 
 ### Basic Authentication
 It is imperative that one sets an authentication requirement for phpMyAdmin.
@@ -110,7 +119,7 @@ In the compose file below, the username will be set to `admin` by default. This 
 run () {
 if { [ -z $PHPMYADMIN_DOMAIN ] || [[ $PHPMYADMIN_DOMAIN == *"example.com" ]] }; then echo "PHPMYADMIN_DOMAIN must be set" && return; fi
 if [ -z $PMA_BASIC_AUTH_PW ]; then echo "PMA_BASIC_AUTH_PW must be set" && return; fi
-cat << EOL | docker stack deploy -c - galera --detach=false
+cat << EOL | docker stack deploy -c - galera --detach=true
 version: '3.8'
 
 services:
@@ -140,6 +149,8 @@ services:
         aliases:
           - mysql.host
           - galera.host
+    volumes:
+      - data:/var/lib/mysql
     deploy:
       mode: global
       placement:
@@ -151,7 +162,6 @@ services:
     secrets:
       - galera_root_pw
       - phpmyadmin_db_pw
-      - phpmyadmin_pw
     environment:
       PMA_HOST: mysql.host
       PMA_PORT: 3306
@@ -177,13 +187,13 @@ services:
 configs:
   galera_tmpl:
     external: true
+  pma_create_tables.sql:
+    external: true
 
 secrets:
   galera_root_pw:
     external: true
   phpmyadmin_db_pw:
-    external: true
-  phpmyadmin_pw:
     external: true
 
 networks:
@@ -199,6 +209,10 @@ networks:
         - subnet: "10.251.0.0/16"
   www:
     external: true
+
+volumes:
+  data:
+    driver: local
 EOL
 }
 run

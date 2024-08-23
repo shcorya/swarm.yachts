@@ -15,7 +15,7 @@ Successful deployment of Patroni depends on sereval services. In general, the da
 The storage of data is handled by a wrapper around PostgreSQL. This service communicates with etcd to determine which node is the master, and HAproxy queries the status of the running tasks of this service to properly route queries.
 
 ### HAproxy
-Routing is handled by HAproxy. In the configuration below, this service listens on both an internal overlay network and a UNIX socket. A global job is deployed to create the directory within `/run` through which the Swarm node will communicate with HAproxy.
+Routing is handled by HAproxy. In the configuration below, this service listens on both an internal overlay network and a UNIX socket. A global job was created in the System stack to create the directory `/opt/swarm/sockets` through which the Swarm node will communicate with HAproxy.
 
 ### socat
 Local between the node and the proxy via TCP is handled by socat. Because of this, the database can be accessed as though it were local on each Swarm node.
@@ -24,9 +24,29 @@ Local between the node and the proxy via TCP is handled by socat. Because of thi
 pgAdmin is a robust and featureful interface for the administration of PostgreSQL databases. It can store its own configuration in its own PostgreSQL database. This database will be created automatically upon the successful deployment of a Patroni cluster.
 
 ## Setup
-To start the deployment of a Patroni cluster, it is prudent to label the swarm nodes which will be used to store the data of the database. For example, add the label `yachts.swarm.patroni=true` to each node that will store the Patroni database.
+We will setup our Patroni cluster with [semisynchronous replication](/stacks/mariadb/#semisynchronous-replication).
 
-## Secrets
+### Environment
+Define the label which will indicate which nodes store our persistent Patroni data.
+```bash
+export PATRONI_LABEL="yachts.swarm.patroni"
+```
+
+Select which nodes will run the databases.
+```bash
+read -a PATRONI_DB_NODES -p "Enter the array of Patroni database nodes (space-seperated): "
+```
+
+Apply the label to the database nodes.
+```bash
+#!/bin/bash
+for i in "${!PATRONI_DB_NODES[@]}"
+do
+  docker node update --label-add $PATRONI_LABEL=storage ${PATRONI_DB_NODES[i]}
+done
+```
+
+### Secrets
 Secrets which need to be set include:
 
 - `postgres_admin_password`
@@ -34,7 +54,7 @@ Secrets which need to be set include:
 - `patroni_superuser_password`
 - `pgadmin_default_password`
 
-Upon starting the Patroni cluster, a user `admin` will be craeted for purposes of creating other roles and databases. It is recommended to use this `admin` account when configuring pgAdmin. Logging in to the database as the superuser or replication user is *not* recommended.
+Upon starting the Patroni cluster, a user `admin` will be created for purposes of creating other roles and databases. It is recommended to use this `admin` account when configuring pgAdmin. Logging in to the database as the superuser or replication user is *not* recommended.
 
 See [Secrets](/stacks/#secrets) for a method to securely create secrets.
 
@@ -111,7 +131,7 @@ The compose file sets the hostname for the database based on the node ID. Both t
 
 The HAProxy config can be created programatically, so long as the environmental variable `PATRONI_LABEL` is set.
 ```bash
-cat << EOL
+cat << EOL | docker config create patroni_proxy_conf -
 global
 $(printf "\tmaxconn 384")
 
@@ -131,21 +151,19 @@ $(printf "\tstats enable")
 $(printf "\tstats uri /")
 
 listen manning
-$(printf "\tbind /run/patroni/proxy.sock")
+$(printf "\tbind /opt/swarm/sockets/patroni.sock")
 $(printf "\tbind *:5432")
 $(printf "\toption httpchk")
 $(printf "\thttp-check expect status 200")
 $(printf "\tdefault-server inter 2500ms fall 4 rise 2 on-marked-down shutdown-sessions")
-$(docker node ls --filter node.label=$PATRONI_LABEL=true --format "\tserver {{.Hostname}} {{.ID}}.patroni.host:15432 maxconn 128 check port 8008")
+$(docker node ls --filter node.label=$PATRONI_LABEL=storage --format "\tserver {{.Hostname}} {{.ID}}.patroni.host:15432 maxconn 128 check port 8008")
 EOL
 ```
 
 Set the domain where the status page for HAProxy can be accessed.
 ```bash
-export PATRONI_STATUS_DOMAIN="status.patroni.example.com"
+export PATRONI_STATUS_DOMAIN="pgstatus.example.com"
 ```
-
-Create a
 
 ### pgAdmin
 To initialize the pgAdmin configuration store within the PostgreSQL database, the following script is run after database initialization. As this service will only be accessible behind the Caddy reverse proxy, the security of the password is less important than this stack's secrets.
@@ -166,7 +184,7 @@ export PGADMIN_DEFAULT_EMAIL="me@example.com"
 
 Additionally, set the domain by which pgAdmin will be accessed.
 ```bash
-export PGADMIN_ACCESS_DOMAIN="pgadmin.patroni.example.com"
+export PGADMIN_ACCESS_DOMAIN="pgadmin.example.com"
 ```
 
 ## Compose
@@ -210,19 +228,11 @@ services:
           cpus: '2'
           memory: 2G
 
-  mk-socket-dir:
-    image: alpine
-    command: mkdir -p /run/patroni
-    volumes:
-      - /run:/run
-    deploy:
-      mode: global-job
-
   localhost-tcp:
     image: alpine/socat
-    command: "-dd TCP-L:5432,fork,bind=localhost UNIX:/run/patroni/proxy.sock"
+    command: "-dd TCP-L:5432,fork,bind=localhost UNIX:/opt/swarm/sockets/patroni.sock
     volumes:
-      - /run/patroni:/run/patroni
+      - /opt/swarm/sockets:/opt/swarm/sockets
     networks:
       - public
     deploy:
@@ -236,13 +246,13 @@ services:
     hostname: patroni.host
     user: root
     configs:
-    - source: patroni_haproxy_conf
+    - source: patroni_proxy_conf
       target: /usr/local/etc/haproxy/haproxy.cfg
     networks:
       - postgres
       - www
     volumes:
-      - /run/patroni:/run/patroni
+      - /opt/swarm/sockets:/opt/swarm/sockets
     deploy:
       labels:
         caddy: $PATRONI_STATUS_DOMAIN
@@ -280,7 +290,7 @@ services:
 configs:
   patroni_conf:
     external: true
-  patroni_haproxy_conf:
+  patroni_proxy_conf:
     external: true
   init_pgadmin_db:
     external: true

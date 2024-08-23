@@ -44,7 +44,7 @@ export ETCD_WEB_DOMAIN=etcd.example.com
 
 ## Compose
 ```bash
-cat << EOL | docker stack deploy -c - etcd
+cat << EOL | docker stack deploy -c - etcd --detach=true
 services:
   member:
     image: quay.io/coreos/etcd:v3.4.28

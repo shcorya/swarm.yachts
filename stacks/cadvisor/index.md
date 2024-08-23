@@ -97,7 +97,7 @@ services:
       SSL_KEY_PATH: /run/secrets/default_ssl_key
       TARGET: "http://127.0.0.1:57832"
     configs:
-      - source: cadvisor_nginx_tmpl
+      - source: nginx_proxy_template
         target: /etc/nginx/nginx.conf
     secrets:
       - default_ssl_cert
@@ -106,7 +106,7 @@ services:
       mode: global
 
 configs:
-  cadvisor_nginx_tmpl:
+  nginx_proxy_template:
     external: true
 
 networks:
