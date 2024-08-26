@@ -50,6 +50,7 @@ services:
       - OPENSEARCH_NODE_CERT_LOCATION="/run/secrets/opensearch_node_cert:"
       - OPENSEARCH_NODE_KEY_LOCATION="/run/secrets/opensearch_node_key"
       - OPENSEARCH_CA_CERT_LOCATION="/run/secrets/opensearch_ca_cert"
+      - OPENSEARCH_PASSWORD_FILE="/run/secrets/opensearch_admin_pw"
     sysctls:
       - net.ipv6.conf.all.disable_ipv6=1
     ulimits:
@@ -69,6 +70,7 @@ services:
       - opensearch_node_cert
       - opensearch_node_key
       - opensearch_ca_cert
+      - opensearch_admin_pw
     deploy:
       mode: global
       placement:
@@ -95,29 +97,39 @@ services:
 #         caddy: $OPENSEARCH_WEB_DOMAIN
 #         caddy.reverse_proxy: http://dashboards.opensearch.host:5601
 
-  dashboards:
-    image: opensearchproject/opensearch-dashboards:1.3.18
-    hostname: dashboards.opensearch.host
-    environment:
-      OPENSEARCH_HOSTS: '["http://opensearch.host:9200"]'
-    networks:
-      - default
-      - www
-    deploy:
-      resources:
-        reservations:
-          memory: "1073741824"
-      replicas: 1
-      placement:
-        constraints:
-          - "node.role == worker"
-      labels:
-        caddy: $OPENSEARCH_WEB_DOMAIN
-        caddy.reverse_proxy: http://dashboards.opensearch.host:5601
+#   dashboards:
+#     image: opensearchproject/opensearch-dashboards:1.3.18
+#     hostname: dashboards.opensearch.host
+#     configs:
+#       - source: opensearch_dashboards
+#         target: /usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
+#         uid: "1000"
+#         gid: "1000"
+#     secrets:
+#       - opensearch_ca_cert
+#       - opensearch_admin_pw
+#     networks:
+#       - default
+#       - www
+#     deploy:
+#       resources:
+#         reservations:
+#           memory: "1073741824"
+#       replicas: 1
+#       placement:
+#         constraints:
+#           - "node.role == worker"
+#       labels:
+#         caddy: $OPENSEARCH_WEB_DOMAIN
+#         caddy.reverse_proxy: http://dashboards.opensearch.host:5601
 
 volumes:
   data:
     driver: local
+
+configs:
+  opensearch_dashboards:
+    external: true
 
 secrets:
   opensearch_node_cert:
@@ -125,6 +137,8 @@ secrets:
   opensearch_node_key:
     external: true
   opensearch_ca_cert:
+    external: true
+  opensearch_admin_pw:
     external: true
 
 networks:
