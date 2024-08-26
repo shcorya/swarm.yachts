@@ -5,6 +5,8 @@
 
 This stack will utilize both types of Garage nodes, gateways and storage. While this may complicate the setup, it will significantly improve network performance.
 
+A [consul](https://hub.docker.com/_/consul) service will be deployed as part of this stack. This allows the garage nodes to exchange gossip messages and assists with automatic privisioning. Opening a user interface to consul through the web allows the user to visualize which nodes are able to reach one another. For the sake of system security, it is advisable to add [basic authentication](https://swarm.yacts/stacks/caddy/#basic-authentication) to this service.
+
 ## Provisioning Storage Nodes
 The basic nodes detailed in the [Getting Started](/getting-started/#basic-node-provisioning) section will likely not be adequate for data storage; therefore, additional nodes should be provisioned. In the same manner as the Getting Started section, the storage nodes should be provisioned as workers.
 
@@ -27,30 +29,32 @@ phaema7tahjeibi5OhKo2aif2     storage-03    Ready     Active                    
 ## Setup
 The configuration in this guide will run a Garage gateway node on each basic worker node and a Garage store on each of the storage nodes. A custom container called [Gordon](https://github.com/coryaent/gordon) will be used to assist in the creation of our Garage cluster.
 
-### Environment
-Ensure that the [ingress label](/stacks/caddy/#environment-setup) is set for each ingress node (the nodes that run [Caddy](/stacks/caddy/)). The same label should be used for Garage as the Caddy ingress nodes. That is, the Garage gateway nodes should already be labeled.
+### Node Labels
+Garage requires the use of zones and capacity to define its nodes. Optional tags can also be applied. We will apply these to our cluster nodes, and these labels will be read by the initialization job and applied to the garage cluster.
+
+#### Zone
+Garage requires the definition of a zone for each node. Define a swarm node label key that will be read by the garage initialization service.
 ```bash
-export GARAGE_INGRESS_LABEL="yachts.swarm.ingress"
+exports GARAGE_ZONE_LABEL="yacts.swarm.garage.zone"
+```
+Add an appropriate zone label to each node that will be part of your garage cluster. For example, if you have a node in Indianapolis, you might set its label as `yaghts.swarm.garage.zone=us-ind`. This needs to be done for each node.
+
+To configure a gateway node, set its capacity to `null`.
+
+#### Capacity
+In addition to a zone, garage requires each node to have a capacity. Define another swarm node label key.
+```bash
+exports GARAGE_CAPACITY_LABEL="yachts.swarm.garage.capacity"
 ```
 
-Define a label that will apply to the storage nodes. Note that this label will be set to `storage`, not `true`.
-```bash
-export GARAGE_STORAGE_LABEL="yachts.swarm.garage"
-```
+The capacity is measured in bytes, so if you have a server where you want to store 100 GB, add a labal to your swarm node such as `yachts.swarm.garage.capacity=100000000000`.
 
-Define a `bash` array containing the storage nodes, for example `storage-01 storage-02 storage-03`.
+#### Capacity
+Optionally, each garage node can have one or more tags assigned. Like with zone and capacity, define a swarm node label that will be read into the garage layout.
 ```bash
-read -a GARAGE_STORAGE_NODES -p "Garage storage nodes (space-seperated): "
+exports GARAGE_TAGS_LABEL="yachts.swarm.garage.tags"
 ```
-
-Apply the storage label to the selected nodes.
-```bash
-#!/bin/bash
-for i in "${!GARAGE_STORAGE_NODES[@]}"
-do
-  docker node update --label-add $GARAGE_STORAGE_LABEL=storage ${GARAGE_STORAGE_NODES[i]}
-done
-```
+This will be read as a comma-seperated array. If you want to add the tags `ssd` and `raid-10` to a node, add a swarm label `yachts.swarm.garage.tags=ssd,raid-10`.
 
 ## Configuration
 Run this script to create the config template `garage_tmpl`.
@@ -106,9 +110,6 @@ openssl rand -base64 32 | docker secret create garage_metrics_token -
 openssl rand -base64 32 | tee /dev/stderr | docker secret create garage_admin_token - > /dev/null
 ```
 
-## Discovery
-A [consul](https://hub.docker.com/_/consul) service will be deployed as part of this stack. This allows the garage nodes to exchange gossip messages and assists with automatic privisioning. Opening a user interface to consul through the web allows the user to visualize which nodes are able to reach one another. For the sake of system security, it is advisable to add [basic authentication](https://swarm.yacts/stacks/caddy/#basic-authentication) to this service.
-
 ## Compose
 ```bash
 cat << EOL | docker stack deploy -c - garage
@@ -163,7 +164,7 @@ services:
           - "node.role == worker"
 
   init:
-    image: coryaent/gordon
+    image: coryaent/gordon:master
     command: --init
     environment:
       GORDON_EXPECTED_NODE_COUNT: 7
@@ -225,7 +226,7 @@ services:
       GARAGE_S3_BIND_ADDR: /opt/swarm/sockets/s3.sock
       GARAGE_WEB_BIND_ADDR: /opt/swarm/sockets/web.sock
     volumes:
-       - /opt/swarm/sockets/:/opt/swarm/sockets/
+      - /opt/swarm/sockets/:/opt/swarm/sockets/
       - data:/var/lib/garage/data
       - metadata:/var/lib/garage/meta
     deploy:
@@ -251,6 +252,9 @@ networks:
     driver: overlay
     driver_opts:
       encrypted: "true"
+  public:
+    external: true
+    name: host
   www:
     external: true
 

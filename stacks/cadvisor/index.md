@@ -1,11 +1,22 @@
+*This stack depends on certbot.*
+
 # cAdvisor
+[cAdvisor](https://github.com/google/cadvisor) is a metrics collector for containers and the hosts that run them. It exposes a web UI as well as prometheus metrics.
 
 ## Reverse Proxy
-This stack will use a different reverse proxy from the Caddy stack. Each node will run its own proxy on the `host` network, allowing each server to be accessed without going through the swarm routing mesh. The generic nginx template can be used to listen on an arbitrary port, and Certbot can be used to fetched signed certificates for each node.
+This stack will use a different reverse proxy from the Caddy stack. Each node will run its own proxy in `host` mode, allowing each server to be accessed without going through the swarm routing mesh. The generic nginx template can be used to listen on an arbitrary port, and Certbot can be used to fetched signed, wildcard certificates for each node.
 
+### Authentication
+Use `htpasswd` to generate a docker secret containing the authorization credentials.
+```bash
+pwgen 24 1 | tee /dev/stderr | htpasswd -nbi cadvisor | docker secret create cadvisor_auth - > /dev/null
+```
+Take note of the password, which will be printed to the console. Use a password manager.
+
+### Configuration
 Create the reverse proxy config template.
 ```bash
-cat << EOL | docker config create --template-driver golang nginx_proxy_template -
+cat << EOL | docker config create --template-driver golang nginx_auth_proxy_template -
 error_log /dev/stdout info;
 
 events  {}
@@ -24,6 +35,10 @@ http    {
                 error_page 497 301 =307 https://\$host:\$server_port\$request_uri;
 
                 location / {
+                        # https://docs.nginx.com/nginx/admin-guide/security-controls/configuring-http-basic-authentication/
+                        auth_basic {{ env "AUTH_BASIC_REALM" }};
+                        auth_basic_user_file {{ env "AUTH_BASIC_USER_FILE" }};
+
                         # https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/
                         proxy_pass {{ env "TARGET" }};
 
@@ -44,78 +59,90 @@ http    {
 }
 EOL
 ```
+## Environment Setup
+Set an environment variable corresponding to your swarm domain which will be used to read the certificate location.
+```bash
+export SWARM_DOMAIN="swarm.yachts"
+```
+
+Optionally, define a realm for basic authentication.
+```bash
+export CADVISOR_REALM="Swarm"
+```
+
 ## Compose
 ```bash
-cat << EOL | docker stack deploy -c - cadvisor
+cat << EOL | docker stack deploy -c - cadvisor --detach=true
 version: '3.8'
 services:
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.2
+    hostname: "{{.Node.Hostname}}_{{.Node.ID}}.cadvisor.host"
+    networks:
+      - internal
     command: >
-      --storage_duration=5m0s
       --logtostderr
-      --stderrthreshold=INFO
-      --allow_dynamic_housekeeping=true
-      --listen_ip="127.0.0.1"
-      --port=57832
-      --http_auth_file="/run/secrets/cadvisor_auth_file"
-      --http_auth_realm="Corya Enterprises, LLC"
-      --storage_driver="redis
-      --storage_driver_host="localhost:24967"
-    secrets:
-      - cadvisor_auth_file
+      --docker_only
     volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - /:/rootfs:ro
-      - /var/run:/var/run:rw
+      - /var/run:/var/run
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
-    networks:
-      - public
     deploy:
       mode: global
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
 
-  storage:
-    image: redis
-    command: >
-      redis-server
-      --bind 127.0.0.1
-      --port 24967
-    networks:
-      - public
-    volumes:
-      - data:/data
-    deploy:
-      mode: global
-
-  ui-proxy:
+  proxy:
     image: nginx
     networks:
-      - public
+      - internal
+    ports:
+      - target: 8080
+        published: 8080
+        mode: host
     environment:
       LISTEN_PORT: 8080
-      SSL_CERT_PATH: /run/secrets/default_ssl_cert
-      SSL_KEY_PATH: /run/secrets/default_ssl_key
-      TARGET: "http://127.0.0.1:57832"
+      SSL_CERT_PATH: /opt/certs/live/$SWARM_DOMAIN/fullchain.pem
+      SSL_KEY_PATH: /opt/certs/live/$SWARM_DOMAIN/privkey.pem
+      TARGET: "http://{{.Node.Hostname}}_{{.Node.ID}}.cadvisor.host:8080"
+      AUTH_BASIC_REALM: ${CADVISOR_REALM:=Swarm}
+      AUTH_BASIC_USER_FILE: /run/secrets/cadvisor_auth
     configs:
-      - source: nginx_proxy_template
+      - source: nginx_auth_proxy_template
         target: /etc/nginx/nginx.conf
     secrets:
-      - default_ssl_cert
-      - default_ssl_key
+      - cadvisor_auth
+    volumes:
+      - certs:/opt/certs/
     deploy:
       mode: global
 
 configs:
-  nginx_proxy_template:
+  nginx_auth_proxy_template:
+    external: true
+
+secrets:
+  cadvisor_auth:
     external: true
 
 networks:
-  public:
-    external: true
-    name: host
+  internal:
+    attachable: false
+    driver: overlay
+    driver_opts:
+      encrypted: "true"
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.245.0.0/16"
 
 volumes:
-  data
-    driver: local
+  certs:
+    external: true
 EOL
 ```

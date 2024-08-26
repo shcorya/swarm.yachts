@@ -46,6 +46,26 @@ do
 done
 ```
 
+A password should be set to access the status page.
+```bash
+export PATRONI_STATUS_BASIC_AUTH=$(caddy hash-password | base64 -w 0)
+```
+
+Set the default email which will be used to login to pgAdmin.
+```bash
+export PGADMIN_DEFAULT_EMAIL="me@example.com"
+```
+
+Additionally, set the domain by which pgAdmin will be accessed.
+```bash
+export PGADMIN_ACCESS_DOMAIN="pgadmin.example.com"
+```
+
+Finally, set the domain for the status page:
+```bash
+export PATRONI_STATUS_DOMAIN="pgstatus.example.com"
+```
+
 ### Secrets
 Secrets which need to be set include:
 
@@ -56,7 +76,21 @@ Secrets which need to be set include:
 
 Upon starting the Patroni cluster, a user `admin` will be created for purposes of creating other roles and databases. It is recommended to use this `admin` account when configuring pgAdmin. Logging in to the database as the superuser or replication user is *not* recommended.
 
-See [Secrets](/stacks/#secrets) for a method to securely create secrets.
+Retention of the `pgadmin_default_password` and the `postgres_admin_password` is important. Again, these should be stored in a password manager. Run these commands to generate pseudorandom passwords, printed to the console.
+```bash
+pwgen 24 1 | tee /dev/stderr | docker secret create pgadmin_default_password - > /dev/null
+```
+```bash
+pwgen 24 1 | tee /dev/stderr | docker secret create postgres_admin_password - > /dev/null
+```
+
+Retention of the `patroni_replication_password` and `patroni_superuser_password` passwords outside of little importance (again, it is not recommended to use these to log in to the database,) and they can set without storing them externally e.g. without the use of a password manager.
+```bash
+openssl rand -hex 32 | docker secret create patroni_replication_password -
+```
+```bash
+openssl rand -hex 32 | docker secret create patroni_superuser_password -
+```
 
 ## Configuration
 The Patroni stack requires several configuration files. Templates will be utilized to reference secret values within configs.
@@ -160,11 +194,6 @@ $(docker node ls --filter node.label=$PATRONI_LABEL=storage --format "\tserver {
 EOL
 ```
 
-Set the domain where the status page for HAProxy can be accessed.
-```bash
-export PATRONI_STATUS_DOMAIN="pgstatus.example.com"
-```
-
 ### pgAdmin
 To initialize the pgAdmin configuration store within the PostgreSQL database, the following script is run after database initialization. As this service will only be accessible behind the Caddy reverse proxy, the security of the password is less important than this stack's secrets.
 
@@ -177,19 +206,9 @@ psql -d "\$1" -c "CREATE DATABASE pgadmin OWNER pgadmin;"
 EOL
 ```
 
-Set the default email which will be used to login to pgAdmin.
-```bash
-export PGADMIN_DEFAULT_EMAIL="me@example.com"
-```
-
-Additionally, set the domain by which pgAdmin will be accessed.
-```bash
-export PGADMIN_ACCESS_DOMAIN="pgadmin.example.com"
-```
-
 ## Compose
 ```bash
-cat << EOL | docker stack deploy -c - patroni
+cat << EOL | docker stack deploy -c - patroni --detach=true
 version: '3.8'
 services:
   database:
@@ -216,21 +235,19 @@ services:
       PATRONI_POSTGRESQL_CONNECT_ADDRESS: '{{.Node.ID}}.patroni.host:15432'
       PATRONI_RESTAPI_CONNECT_ADDRESS: '{{.Node.ID}}.patroni.host:15432'
       PATRONI_POSTGRESQL_LISTEN: 0.0.0.0:15432
-      PATRONI_SCOPE: enterprises
+      PATRONI_SCOPE: swarm
       PATRONI_ETCD3_HOST: etcd:2379
     deploy:
       mode: global
       placement:
         constraints:
-          - "node.labels.enterprises.corya.patroni == true"
-      resources:
-        reservations:
-          cpus: '2'
-          memory: 2G
+          - "node.labels.$PATRONI_LABEL == storage"
 
-  localhost-tcp:
+  local-socket:
     image: alpine/socat
-    command: "-dd TCP-L:5432,fork,bind=localhost UNIX:/opt/swarm/sockets/patroni.sock
+    extra_hosts:
+      - "node.docker.host:host-gateway"
+    command: "-dd TCP-L:5432,fork,bind=node.docker.host UNIX:/opt/swarm/sockets/patroni.sock"
     volumes:
       - /opt/swarm/sockets:/opt/swarm/sockets
     networks:
@@ -257,13 +274,11 @@ services:
       labels:
         caddy: $PATRONI_STATUS_DOMAIN
         caddy.reverse_proxy: http://patroni.host:7000
-        caddy.basicauth.admin: JDJhJDE0JHZlYUFnci56NzV4ZDZDcmdjSXZMeU9scmVNVndmRTdkVWFiWjVoQkFPbUJ5WlZsL2lIL1BpCg==
+        caddy.basicauth.admin: $PATRONI_STATUS_BASIC_AUTH
       mode: global
       placement:
         constraints:
           - "node.role == worker"
-      restart_policy:
-        delay: 0s
 
   pgadmin:
     image: dpage/pgadmin4

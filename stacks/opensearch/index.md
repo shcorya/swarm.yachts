@@ -1,51 +1,96 @@
 # OpenSearch (ELK Stack)
 
+Create label.
 ```bash
-cat << EOL | docker stack deploy -c - elk
+export OPENSEARCH_LABEL="yachts.swarm.opensearch"
+```
+
+Read nodes.
+```bash
+read -a OPENSEARCH_NODES -p "Enter the OpenSearch node array (space-seperated): "
+```
+
+Apply label.
+```bash
+#!/bin/bash
+for i in "${!OPENSEARCH_NODES[@]}"
+do
+  docker node update --label-add $OPENSEARCH_LABEL=true ${OPENSEARCH_NODES[i]}
+done
+```
+
+Define an administrator password.
+```bash
+export OPENSEARCH_INITIAL_ADMIN_PASSWORD=$(pwgen -y 24 1) && echo $OPENSEARCH_INITIAL_ADMIN_PASSWORD
+```
+
+Select a domian.
+```bash
+export OPENSEARCH_WEB_DOMAIN='dashboards.swarm.yachts'
+```
+
+Optionally, name the cluster.
+```bash
+export OPENSEARCH_CLUSTER_NAME="Swarm"
+```
+
+```bash
+cat << EOL | docker stack deploy -c - elk --detach=true
 version: '3.8'
 services:
-  node: # This is also the hostname of the container within the Docker network (i.e. https://opensearch-node1/)
+  node:
     image: opensearchproject/opensearch:2.16.0
     hostname: "{{.Node.ID}}.opensearch.host"
     environment:
-      - cluster.name=$OPENSEARCH_CLUSTER_NAME
-      - node.name={{.Node.Hostname}}
-      - discovery.seed_hosts=$OPENSEARCH_HOSTS
-      - cluster.initial_cluster_manager_nodes=$OPENSEARCH_HOSTS
+      - cluster.name=${OPENSEARCH_CLUSTER_NAME:=Swarm}
+      - node.name="{{.Node.ID}}.opensearch.host"
+      - discovery.seed_hosts=$(docker node ls -q --filter node.label=$OPENSEARCH_LABEL=true | tr '\n' ' ' | sed -e "s/ /.opensearch.host /g" | awk '{$1=$1};1' | tr ' ' ',')
+      - cluster.initial_cluster_manager_nodes=$(docker node ls -q --filter node.label=$OPENSEARCH_LABEL=true | tr '\n' ' ' | sed -e "s/ /.opensearch.host /g" | awk '{$1=$1};1' | tr ' ' ',')
       - bootstrap.memory_lock=true
       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
-      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD} # Sets the demo admin user password when using demo configuration (for OpenSearch 2.12 and later)
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:=yachts}
+      - plugins.security.ssl.transport.resolve_hostname=false
+      - plugins.security.ssl.transport.enforce_hostname_verification=false
+      - plugins.security.audit.config.enable_ssl=false
+      - plugins.security.audit.config.verify_hostnames=false
+      - plugins.security.ssl.http.clientauth_mode=NONE
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1
     ulimits:
       memlock:
-        soft: -1 # Set memlock to unlimited (no soft or hard limit)
+        soft: -1
         hard: -1
       nofile:
-        soft: 65536 # Maximum number of open files for the opensearch user - set to at least 65536
+        soft: 65536
         hard: 65536
     volumes:
-      - data:/usr/share/opensearch/data # Creates volume called opensearch-data1 and mounts it to the container
+      - data:/usr/share/opensearch/data
     networks:
       default:
         aliases:
           - opensearch.host
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - "node.labels.$OPENSEARCH_LABEL == true"
 
   dashboards:
     image: opensearchproject/opensearch-dashboards:2.16.0
     hostname: dashboards.opensearch.host
     environment:
-      OPENSEARCH_HOSTS: '["https://opensearch-node1:9200","https://opensearch-node2:9200"]'
+      OPENSEARCH_HOSTS: '["http://opensearch.host:9200"]'
     networks:
       - default
-      - web
+      - www
     deploy:
       replicas: 1
       placement:
         constraints:
           - "node.role == worker"
       labels:
-        caddy: $ETCD_WEB_DOMAIN
+        caddy: $OPENSEARCH_WEB_DOMAIN
         caddy.reverse_proxy: http://dashboards.opensearch.host:5601
-        caddy.basicauth.admin: $ETCD_WEB_AUTH
 
 volumes:
   data:
@@ -62,5 +107,7 @@ networks:
       driver: default
       config:
         - subnet: "10.249.0.0/16"
+  www:
+    external: true
 EOL
 ```

@@ -65,9 +65,9 @@ export default defineConfig({
             ]},
             { text: 'Garage', link: '/stacks/garage/', items:[
             ]},
-            { text: 'cAdvisor', link: '/stacks/cadvisor/', items:[
+            { text: 'ELK', link: '/stacks/opensearch/', items:[
             ]},
-            { text: 'ELK', link: '/stacks/elk/', items:[
+            { text: 'cAdvisor', link: '/stacks/cadvisor/', items:[
             ]},
           ]
         },
