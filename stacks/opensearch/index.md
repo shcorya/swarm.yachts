@@ -42,18 +42,14 @@ services:
     image: bitnami/opensearch:1.3.18
     hostname: "{{.Node.ID}}.opensearch.host"
     environment:
-      - cluster.name=${OPENSEARCH_CLUSTER_NAME:=Swarm}
-      - node.name="{{.Node.ID}}.opensearch.host"
-      - discovery.seed_hosts=$(docker node ls -q --filter node.label=$OPENSEARCH_LABEL=true | tr '\n' ' ' | sed -e "s/ /.opensearch.host /g" | awk '{$1=$1};1' | tr ' ' ',')
-      - cluster.initial_cluster_manager_nodes=$(docker node ls -q --filter node.label=$OPENSEARCH_LABEL=true | tr '\n' ' ' | sed -e "s/ /.opensearch.host /g" | awk '{$1=$1};1' | tr ' ' ',')
-      - bootstrap.memory_lock=true
-      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
-#      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:=Yachts1!}
-#      - plugins.security.ssl.transport.resolve_hostname=false
-#      - plugins.security.ssl.transport.enforce_hostname_verification=false
-#      - plugins.security.audit.config.enable_ssl=false
-#      - plugins.security.audit.config.verify_hostnames=false
-#      - plugins.security.ssl.http.clientauth_mode=NONE
+      - OPENSEARCH_CLUSTER_NAME=${OPENSEARCH_CLUSTER_NAME:=Swarm}
+      - OPENSEARCH_NODE_NAME={{.Node.Hostname}}
+      - OPENSEARCH_ENABLE_SECURITY="true"
+      - OPENSEARCH_TLS_USE_PEM="true"
+      - OPENSEARCH_TLS_VERIFICATION_MODE="certonly"
+      - OPENSEARCH_NODE_CERT_LOCATION="/run/secrets/opensearch_node_cert:"
+      - OPENSEARCH_NODE_KEY_LOCATION="/run/secrets/opensearch_node_key"
+      - OPENSEARCH_CA_CERT_LOCATION="/run/secrets/opensearch_ca_cert"
     sysctls:
       - net.ipv6.conf.all.disable_ipv6=1
     ulimits:
@@ -69,19 +65,41 @@ services:
       default:
         aliases:
           - opensearch.host
+    secrets:
+      - opensearch_node_cert
+      - opensearch_node_key
+      - opensearch_ca_cert
     deploy:
       mode: global
       placement:
         constraints:
           - "node.labels.$OPENSEARCH_LABEL == true"
 
+#   dashboards:
+#     image: opensearchproject/opensearch-dashboards:1.3.18
+#     hostname: dashboards.opensearch.host
+#     environment:
+#       OPENSEARCH_HOSTS: '["http://opensearch.host:9200"]'
+#     networks:
+#       - default
+#       - www
+#     deploy:
+#       resources:
+#         reservations:
+#           memory: "1073741824"
+#       replicas: 1
+#       placement:
+#         constraints:
+#           - "node.role == worker"
+#       labels:
+#         caddy: $OPENSEARCH_WEB_DOMAIN
+#         caddy.reverse_proxy: http://dashboards.opensearch.host:5601
+
   dashboards:
     image: opensearchproject/opensearch-dashboards:1.3.18
     hostname: dashboards.opensearch.host
     environment:
       OPENSEARCH_HOSTS: '["http://opensearch.host:9200"]'
-      # this disables login security
-      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
     networks:
       - default
       - www
@@ -96,11 +114,18 @@ services:
       labels:
         caddy: $OPENSEARCH_WEB_DOMAIN
         caddy.reverse_proxy: http://dashboards.opensearch.host:5601
-        caddy.basicauth.admin: $MY_BASIC_AUTH
 
 volumes:
   data:
     driver: local
+
+secrets:
+  opensearch_node_cert:
+    external: true
+  opensearch_node_key:
+    external: true
+  opensearch_ca_cert:
+    external: true
 
 networks:
   default:
