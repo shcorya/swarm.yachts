@@ -1,7 +1,5 @@
 *This stack depends on cron.*
 
-**This is the most involved and difficult stack in this guide. It is necessary if one wants to access swarm services from outside the swarm outside of HTTP(S) ports 80 or 443.**
-
 # Certbot
 [Certbot](https://certbot.eff.org/) is a program that handles the creation and renewal of Let's Encrypt certificates. Using this stack does not require any open ports; it relies on `DNS-01` challenges. Using the `DNS-01` ACME challenge has some advantages. One is that there is no need to open ports on any hosts. Another is that wildcard certificates can be obtained. These advantages will greatly ease the creation of secure swarm services.
 

@@ -83,6 +83,7 @@ services:
     command: >
       --logtostderr
       --docker_only
+      --storage_driver="stdout"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /:/rootfs:ro

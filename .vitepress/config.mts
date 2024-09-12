@@ -53,11 +53,12 @@ export default defineConfig({
             { text: 'RedisRaft', link: '/stacks/redisraft/', items:[
               // {text: "Compose", link: '/stacks/redisraft/#compose'}
             ]},
+            { text: 'MongoDB', link: '/stacks/mongodb/', items:[
+              // {text: "Compose", link: '/stacks/redisraft/#compose'}
+            ]},
             { text: 'Caddy', link: '/stacks/caddy/', items:[
             ]},
             { text: 'MariaDB', link: '/stacks/mariadb/', items:[
-            ]},
-            { text: 'GLAuth', link: '/stacks/ldap/', items:[
             ]},
             { text: 'etcd', link: '/stacks/etcd/', items:[
             ]},
@@ -65,7 +66,9 @@ export default defineConfig({
             ]},
             { text: 'Garage', link: '/stacks/garage/', items:[
             ]},
-            { text: 'ELK', link: '/stacks/opensearch/', items:[
+            { text: 'OpenSearch', link: '/stacks/opensearch/', items:[
+            ]},
+            { text: 'Logstash', link: '/stacks/logstash/', items:[
             ]},
             { text: 'cAdvisor', link: '/stacks/cadvisor/', items:[
             ]},
