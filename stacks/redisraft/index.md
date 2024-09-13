@@ -4,6 +4,8 @@ prev:
   link: '/stacks/'
 ---
 
+*This stack is not suitable for production. It was previously used for the Caddy TLS storage backend.*
+
 # RedisRaft
 [Redis](https://redis.io/) is an in-memory storage for various data types. It includes support for sets, lists, simple key-value pairs, and hash maps. RedisRaft is an extension to Redis that provides a strong-consistency deployment option.
 

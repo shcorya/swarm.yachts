@@ -46,6 +46,9 @@ Optionally, set an email address. This email will be used to alert the user of i
 export CADDY_EMAIL="me@example.com"
 ```
 
+## Create Database
+Use the mongo-express UI to create a database `caddy`. Then create a collection within that database `certificates`.
+
 ## Configuration
 In order to configure CORS in the future, create a new Caddyfile config.
 ```bash
@@ -131,7 +134,7 @@ services:
   controller:
     image: coryaent/lowery:master
     configs:
-      - Caddyfile_3
+      - Caddyfile_2
     secrets:
       - caddy_gandi_pat
     networks:
@@ -141,7 +144,7 @@ services:
       <<: *common-env
       CADDY_DOCKER_MODE: controller
       DOCKER_HOST: tcp://socket:2375
-      CADDY_DOCKER_CADDYFILE_PATH: /Caddyfile_3
+      CADDY_DOCKER_CADDYFILE_PATH: /Caddyfile_2
     deploy:
       placement:
         constraints:
@@ -169,7 +172,7 @@ services:
         caddy.reverse_proxy: "http://whoami:80"
 
 configs:
-  Caddyfile_3:
+  Caddyfile_2:
     external: true
 secrets:
   caddy_gandi_pat:
