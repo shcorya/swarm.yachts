@@ -114,7 +114,9 @@ services:
     networks:
       - www
       - control
-      - redisraft
+      - mongodb
+    volumes:
+      - /opt/swarm/sockets:/opt/swarm/sockets
     environment:
       <<: *common-env
       CADDY_DOCKER_MODE: server
@@ -129,7 +131,9 @@ services:
   controller:
     image: coryaent/lowery:master
     configs:
-      - Caddyfile
+      - Caddyfile_3
+    secrets:
+      - caddy_gandi_pat
     networks:
       - control
       - internal
@@ -137,7 +141,7 @@ services:
       <<: *common-env
       CADDY_DOCKER_MODE: controller
       DOCKER_HOST: tcp://socket:2375
-      CADDY_DOCKER_CADDYFILE_PATH: /Caddyfile
+      CADDY_DOCKER_CADDYFILE_PATH: /Caddyfile_3
     deploy:
       placement:
         constraints:
@@ -147,8 +151,11 @@ services:
         caddy.log: default
         caddy.log.output: stdout
         caddy.log.format: console
-        caddy.storage: redis
-        caddy.storage.redis.host: redisraft.host
+        caddy.storage: mongodb
+        caddy.storage.uri: mongodb://mongodb.host:27017
+        caddy.storage.database: caddy
+        caddy.storage.collection: certificates
+        caddy.storage.timeout: 10s
         caddy.order: "cache before rewrite"
         caddy.cache.allowed_http_verbs: "GET HEAD"
 
@@ -162,11 +169,14 @@ services:
         caddy.reverse_proxy: "http://whoami:80"
 
 configs:
-  Caddyfile:
+  Caddyfile_3:
+    external: true
+secrets:
+  caddy_gandi_pat:
     external: true
 
 networks:
-  redisraft:
+  mongodb:
     external: true
   www:
     name: www
