@@ -1,5 +1,6 @@
-FROM node:20.11.1-alpine3.19 AS compiler
+FROM node:20-alpine AS compiler
 
+# needed for compilation
 RUN apk add git
 
 WORKDIR /app
@@ -12,7 +13,8 @@ COPY . .
 
 RUN npm run docs:build
 
-FROM node:20.11.1-alpine3.19
+# output image
+FROM node:20-alpine
 
 COPY --from=compiler /app/.vitepress/dist ./
 

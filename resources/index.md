@@ -4,10 +4,10 @@ This guide would not be possible without [dockerswarm.rocks](https://dockerswarm
 
 [Funky Penguin's Geek Cookbook](https://geek-cookbook.funkypenguin.co.nz/) shows users how to set up a distributed system, similar to this site. It also covers Kubernetes. Unlike swarm.yachts, Funky Penguin's guide is not suitable for WAN networks.
 
-## Hosting Static Sites with Garage
+## Hosting Static Sites
 Create a bucket for the site e.g. `yachts`.
 
-Configure [AWS CLI](https://garagehq.deuxfleurs.fr/documentation/connect/cli/#aws-cli) and [Minio clint])(https://garagehq.deuxfleurs.fr/documentation/connect/cli/#minio-client). The AWS CLI will be used to expose the bucket as a website, and the Minio client will be used to copy the data to the bucket.
+Configure [AWS CLI](https://garagehq.deuxfleurs.fr/documentation/connect/cli/#aws-cli) and [Minio clint](https://garagehq.deuxfleurs.fr/documentation/connect/cli/#minio-client). The AWS CLI will be used to expose the bucket as a website, and the Minio client will be used to copy the data to the bucket.
 
 Create a CNAME record pointing to the site, e.g. `yachts.web.swarm.yachts` pointing to `ingress.swarm.yachts`.
 
@@ -32,7 +32,7 @@ aws s3api put-bucket-website --bucket yachts --website-configuration file://webs
 Copy the website using minio.
 
 ```bash
-mcli mirror --overwrite ~/Desktop/sample/ garage/yachts
+mcli mirror --overwrite ./ garage/yachts
 ```
 
 ## Additional Compose Files
