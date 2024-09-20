@@ -67,8 +67,8 @@ services:
       mongodb:
         aliases:
           - mongodb.host
-#    volumes:
-#      - data:/data/db
+    volumes:
+      - data:/data/db
     deploy:
       mode: global
       placement:
@@ -77,7 +77,7 @@ services:
 
   express:
     image: mongo-express
-    hostname: mongo.corya.enterprises
+    hostname: mongo.$SWARM_DOMAIN
     networks:
       - mongodb
     ports:

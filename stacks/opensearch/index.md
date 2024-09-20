@@ -183,6 +183,7 @@ logstash:
   hash: "$(caddy hash-password --plaintext $OPENSEARCH_LOGSTASH_PASSWORD)"
   reserved: false
   backend_roles:
+  - "admin"
   - "logstash"
   description: "Logstash user"
 EOL
@@ -332,7 +333,6 @@ EOL
 
 ```bash
 cat << EOL | docker stack deploy -c - opensearch --detach=true
-
 version: '3.8'
 services:
   securityadmin:

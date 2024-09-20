@@ -27,14 +27,5 @@ services:
       placement:
         constraints:
           - node.role == manager
-
-  updates:
-    image: registry.gitlab.com/ix.ai/cioban:latest
-    volumes:
-      - '/var/run/docker.sock:/var/run/docker.sock'
-    deploy:
-      placement:
-        constraints:
-          - node.role == manager
 EOL
 ```

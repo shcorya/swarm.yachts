@@ -1,6 +1,6 @@
-*This stack depends on MariaDB.*
+*This stack depends on MariaDB and Caddy.*
 
-# lldap
+# LLDAP
 [Light LDAP](https://github.com/lldap/lldap) is an authentication server that provides a simplified version of the LDAP protocol for user management.
 
 ## Configure
@@ -44,20 +44,12 @@ cat << EOL | docker config create lldap_conf -
 #http_port = 17170
 
 ## The public URL of the server, for password reset links.
-#http_url = "http://localhost"
+http_url = "http://localhost"
 
 ## Random secret for JWT signature.
 ## This secret should be random, and should be shared with application
 ## servers that need to consume the JWTs.
-## Changing this secret will invalidate all user sessions and require
-## them to re-login.
-## You should probably set it through the LLDAP_JWT_SECRET environment
-## variable from a secret ".env" file.
-## This can also be set from a file's contents by specifying the file path
-## in the LLDAP_JWT_SECRET_FILE environment variable
-## You can generate it with (on linux):
-## LC_ALL=C tr -dc 'A-Za-z0-9!#%&'\''()*+,-./:;<=>?@[\]^_{|}~' </dev/urandom | head -c 32; echo ''
-#jwt_secret = "REPLACE_WITH_RANDOM"
+jwt_secret = "{{ secret "lldap_jwt" }}"
 
 ## Base DN for LDAP.
 ## This is usually your domain name, and is used as a
@@ -66,78 +58,35 @@ cat << EOL | docker config create lldap_conf -
 ## The sample value is for "example.com", but you can extend it with as
 ## many "dc" as you want, and you don't actually need to own the domain
 ## name.
-#ldap_base_dn = "dc=example,dc=com"
+ldap_base_dn = "dc=example,dc=com"
 
 ## Admin username.
 ## For the LDAP interface, a value of "admin" here will create the LDAP
 ## user "cn=admin,ou=people,dc=example,dc=com" (with the base DN above).
 ## For the administration interface, this is the username.
-#ldap_user_dn = "admin"
+ldap_user_dn = "admin"
 
 ## Admin email.
 ## Email for the admin account. It is only used when initially creating
 ## the admin user, and can safely be omitted.
-#ldap_user_email = "admin@example.com"
+ldap_user_email = "admin@example.com"
 
 ## Admin password.
 ## Password for the admin account, both for the LDAP bind and for the
 ## administration interface. It is only used when initially creating
 ## the admin user.
 ## It should be minimum 8 characters long.
-## You can set it with the LLDAP_LDAP_USER_PASS environment variable.
-## This can also be set from a file's contents by specifying the file path
-## in the LLDAP_LDAP_USER_PASS_FILE environment variable
-## Note: you can create another admin user for user administration, this
-## is just the default one.
-#ldap_user_pass = "REPLACE_WITH_PASSWORD"
-
-## Force reset of the admin password.
-## Break glass in case of emergency: if you lost the admin password, you
-## can set this to true to force a reset of the admin password to the value
-## of ldap_user_pass above.
-## Alternatively, you can set it to "always" to reset every time the server starts.
-# force_ldap_user_pass_reset = false
+ldap_user_pass = "REPLACE_WITH_PASSWORD"
 
 ## Database URL.
 ## This encodes the type of database (SQlite, MySQL, or PostgreSQL)
 ## , the path, the user, password, and sometimes the mode (when
 ## relevant).
-## Note: SQlite should come with "?mode=rwc" to create the DB
-## if not present.
-## Example URLs:
-##  - "postgres://postgres-user:password@postgres-server/my-database"
-##  - "mysql://mysql-user:password@mysql-server/my-database"
-##
-## This can be overridden with the LLDAP_DATABASE_URL env variable.
-database_url = "sqlite:///data/users.db?mode=rwc"
+database_url = "mysql://lldap:access@mysql.host/lldap"
 
 ## Private key file.
-## Not recommended, use key_seed instead.
-## Contains the secret private key used to store the passwords safely.
-## Note that even with a database dump and the private key, an attacker
-## would still have to perform an (expensive) brute force attack to find
-## each password.
-## Randomly generated on first run if it doesn't exist.
-## Env variable: LLDAP_KEY_FILE
 #key_file = "/data/private_key"
 
-## Seed to generate the server private key, see key_file above.
-## This can be any random string, the recommendation is that it's at least 12
-## characters long.
-## Env variable: LLDAP_KEY_SEED
-key_seed = "RanD0m STR1ng"
-
-## Ignored attributes.
-## Some services will request attributes that are not present in LLDAP. When it
-## is the case, LLDAP will warn about the attribute being unknown. If you want
-## to ignore the attribute and the service works without, you can add it to this
-## list to silence the warning.
-#ignored_user_attributes = [ "sAMAccountName" ]
-#ignored_group_attributes = [ "mail", "userPrincipalName" ]
-
-## Options to configure SMTP parameters, to send password reset emails.
-## To set these options from environment variables, use the following format
-## (example with "password"): LLDAP_SMTP_OPTIONS__PASSWORD
 [smtp_options]
 ## Whether to enabled password reset via email, from LLDAP.
 #enable_password_reset=true
@@ -157,14 +106,11 @@ key_seed = "RanD0m STR1ng"
 ## Same for reply-to, optional.
 #reply_to="Do not reply <noreply@localhost>"
 
-## Options to configure LDAPS.
-## To set these options from environment variables, use the following format
-## (example with "port"): LLDAP_LDAPS_OPTIONS__PORT
 [ldaps_options]
 ## Whether to enable LDAPS.
-#enabled=true
+enabled=true
 ## Port on which to listen.
-#port=6360
+port=636
 ## Certificate file.
 cert_file="/data/cert.pem"
 key_file="/data/key.pem"
@@ -192,18 +138,11 @@ services:
     ports:
       - "636:636"
     environment:
-      - UID=150
-      - GID=150
-      - TZ=$TIMEZONE
-      - LLDAP_JWT_SECRET_FILE=REPLACE_WITH_RANDOM
-      - LLDAP_KEY_SEED_FILE=REPLACE_WITH_RANDOM
-      - LLDAP_LDAP_BASE_DN=dc=example,dc=com
-      - LLDAP_LDAPS_OPTIONS__PORT=636
-      - LLDAP_HTTP_URL=https://users.swarm.yachts
-      - LLDAP_LDAPS_OPTIONS__ENABLED=true
-      - LLDAP_LDAPS_OPTIONS__CERT_FILE=/path/to/certfile.crt
-      - LLDAP_LDAPS_OPTIONS__KEY_FILE=/path/to/keyfile.key
-      - LLDAP_DATABASE_URL=mysql://mysql-user:password@mysql-server/my-database
+      UID: 0
+      GID: 0
+      TZ: $TIMEZONE
+      LLDAP_HTTP_URL: https://users.swarm.yachts
+      LLDAP_LDAP_BASE_DN: dc=example,dc=com
     deploy:
       mode: replicated
       replicas: 2

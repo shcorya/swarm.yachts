@@ -25,7 +25,7 @@ export default defineConfig({
   ],
   lastUpdated: true,
   themeConfig: {
-    logo: '/artwork/logo.svg',
+    logo: '/logo.svg',
     editLink: {
       pattern: 'https://github.com/shcorya/swarm.yachts/edit/master/:path'
     },
@@ -44,9 +44,9 @@ export default defineConfig({
         {
           text: 'Stacks',
           items: [
-            { text: 'cron', link: '/stacks/cron/', items:[
-            ]},
             { text: 'System', link: '/stacks/system/', items:[
+            ]},
+            { text: 'cron', link: '/stacks/cron/', items:[
             ]},
             { text: 'Certbot', link: '/stacks/certbot/', items:[
             ]},
@@ -98,7 +98,7 @@ export default defineConfig({
     },
 
     footer: {
-      message: 'A compilation of resources maintained by <a href=https://corya.me>Steve Corya</a> | Released under the CC0 1.0 Universal License | Created with <a href=https://vitepress.dev>VitePress</a>'
+      message: 'A compilation of resources maintained by <a href=https://scorya.com>Stephen Corya</a> | Released under the CC0 1.0 Universal License | Created with <a href=https://vitepress.dev>VitePress</a>'
     },
 
     srcExclude: ['**/README.md']
