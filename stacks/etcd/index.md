@@ -95,7 +95,7 @@ services:
       labels:
         caddy: $ETCD_WEB_DOMAIN
         caddy.reverse_proxy: http://browser.etcd.host:8081
-        caddy.basicauth.admin: $ETCD_WEB_AUTH
+        caddy.basic_auth.admin: $ETCD_WEB_AUTH
 
 networks:
   www:

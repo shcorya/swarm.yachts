@@ -34,7 +34,7 @@ As implied by the names, the worker nodes will do most of the computation. The m
 
 Note: managers can also be workers, although this is not recommended for production deployments. Deploying more than a few stacks at a time could excessively tax a machine's resources. Overloading management nodes can result in degredation of the entire swarm.
 
-Install Linux on each of the VPS's. This guide assumes Debian has been installed on each host. Set the hostnames to something descriptive, for example `manager-01`, `worker-02`, etc.
+Install Linux on each of the VPS's. This guide assumes Debian has been installed on each host. Set the hostnames to something descriptive, for example `manager-01`, `worker-02`, etc. Many things will be easier if you exclude your TLD from the hostnames.
 
 ## Setting DNS Records
 Create a DNS A record for each of your new machines. Then, set another A record which is the same domain name pointing to the three worker nodes. For example, if your worker IP's are `1.2.3.4`, `3.4.5.6`, and `5.6.7.8`, create the following A records:
@@ -53,8 +53,10 @@ curl -s https://get.docker.com | bash
 
 It will also be handy to install [Caddy](https://caddyserver.com/docs/install#static-binaries) on your local machine, as well as the managers. Make sure that it does *not* run as a system service. The binary can be used to hash passwords, but the server will be run using a Swarm Stack.
 
+Also install `pwgen`, `openssl`, and `htpasswd`.
+
 ## Initialization
-Then, on a manager node, run:
+On a manager node, run:
 ```bash
 docker swarm init
 ```

@@ -158,7 +158,7 @@ services:
       labels:
         caddy: garage.corya.enterprises
         caddy.reverse_proxy: garage.discovery.host:8500
-        caddy.basicauth.admin: JDJhJDE0JGNiZFpXSEJTbTEueWZSaUJYbThHb3ViWVcwb0o1emVJNVZvWGk5VjYwREwuLmVmWUo0djZXCg==
+        caddy.basic_auth.admin: JDJhJDE0JGNiZFpXSEJTbTEueWZSaUJYbThHb3ViWVcwb0o1emVJNVZvWGk5VjYwREwuLmVmWUo0djZXCg==
       placement:
         constraints:
           - "node.role == worker"

@@ -32,8 +32,7 @@ services:
         condition: none
 
   updates:
-    # https://gitlab.com/ix.ai/cioban#examples
-    image: registry.gitlab.com/ix.ai/cioban:latest
+    image: ixdotai/cioban
     volumes:
       - '/var/run/docker.sock:/var/run/docker.sock'
     deploy:

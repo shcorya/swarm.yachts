@@ -274,7 +274,7 @@ services:
       labels:
         caddy: $PATRONI_STATUS_DOMAIN
         caddy.reverse_proxy: http://patroni.host:7000
-        caddy.basicauth.admin: $PATRONI_STATUS_BASIC_AUTH
+        caddy.basic_auth.admin: $PATRONI_STATUS_BASIC_AUTH
       mode: global
       placement:
         constraints:
