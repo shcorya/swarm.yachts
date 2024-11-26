@@ -96,3 +96,9 @@ saeSh9chue6aoqu1ahv3Mah1t     worker-01     Ready     Active                    
 Zoowou7een6aey9eici6Vaiz9     worker-02     Ready     Active                          25.0.3
 aocaingaish5eepoh4aeTh9eo     worker-03     Ready     Active                          25.0.3
 ```
+
+## Create a Network for Metrics
+In order to facility monitoring of services, create a `metrics` overlay network that will be used by Prometheus to scrape relevant endpoints.
+```bash
+docker network create --driver=overlay --opt encrypted --attachable --subnet=10.239.0.0/16  metrics
+```

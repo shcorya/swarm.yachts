@@ -18,7 +18,7 @@ We need to configure the docker daemon to log to the gelf format on a proxy that
 ### Swarm Config
 Logstash uses configuration files called pipelines that define inputs and outputs. Create the following config template, which uses the swarm secret password that we created in the OpenSearch section.
 ```bash
-cat << EOL | docker config create --template-driver=golang logstash_conf -
+cat << EOL | docker config create --template-driver=golang dockerd_gelf_logstash -
 input {
   gelf {}
 }
@@ -43,7 +43,7 @@ cat << EOL | docker stack deploy --detach=true -c - logstash
 version: '3.8'
 
 services:
-  localhost:
+  gelfin:
     image: coryaent/socat
     command: "-dd UDP-L:12201,fork,bind=127.0.0.1 UNIX:/opt/swarm/sockets/logstash.sock"
     volumes:
@@ -53,7 +53,7 @@ services:
     deploy:
       mode: global
 
-  ingress:
+  gelfout:
     image: coryaent/socat
     command: "-dd UNIX-L:/opt/swarm/sockets/logstash.sock,fork UDP:pipe:12201"
     volumes:
@@ -63,16 +63,16 @@ services:
     deploy:
       mode: global
 
-  pipe:
-    image: opensearchproject/logstash-oss-with-opensearch-output-plugin:7.16.2
+  pipes:
+    image: logstash-oss:8.15.3
     secrets:
       - opensearch_logstash_pw
     networks:
       - internal
-      - opensearch
+      - m3db
     configs:
       - source: logstash_conf
-        target: /usr/share/logstash/pipeline/logstash.conf
+        target: /usr/share/logstash/pipeline/dockerd-gelf.conf
     deploy:
       mode: replicated
       replicas: 2
@@ -83,10 +83,6 @@ services:
         reservations:
           memory: "986513408"
 
-secrets:
-  opensearch_logstash_pw:
-    external: true
-
 configs:
   logstash_conf:
     external: true
@@ -95,7 +91,7 @@ networks:
   public:
     name: host
     external: true
-  opensearch:
+  m3db:
     external: true
   internal:
     name: logstash

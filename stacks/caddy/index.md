@@ -75,6 +75,14 @@ cat << EOF | docker config create Caddyfile -
                 }
         }
 }
+
+(desec) {
+        tls {
+                dns desec {
+                        token {{ secret "caddy_desec_token" }}
+                }
+        }
+}
 EOF
 ```
 Other configuration options can be set by swarm labels.

@@ -167,7 +167,7 @@ The HAProxy config can be created programatically, so long as the environmental 
 ```bash
 cat << EOL | docker config create patroni_proxy_conf -
 global
-$(printf "\tmaxconn 384")
+$(printf "\tmaxconn 256")
 
 defaults
 $(printf "\tlog global")
@@ -190,7 +190,7 @@ $(printf "\tbind *:5432")
 $(printf "\toption httpchk")
 $(printf "\thttp-check expect status 200")
 $(printf "\tdefault-server inter 2500ms fall 4 rise 2 on-marked-down shutdown-sessions")
-$(docker node ls --filter node.label=$PATRONI_LABEL=storage --format "\tserver {{.Hostname}} {{.ID}}.patroni.host:15432 maxconn 128 check port 8008")
+$(docker node ls --filter node.label=$PATRONI_LABEL=storage --format "\tserver {{.Hostname}} {{.ID}}.patroni.host:15432 maxconn 256 check port 8008")
 EOL
 ```
 
@@ -210,6 +210,18 @@ EOL
 ```bash
 cat << EOL | docker stack deploy -c - patroni --detach=true
 version: '3.8'
+
+x-socket: &socket
+  volumes:
+    - /opt/swarm/sockets:/opt/swarm/sockets
+  networks:
+    - public
+  deploy:
+    mode: global
+    resources:
+      limits:
+        memory: 32M
+
 services:
   database:
     image: coryaent/manning:master
@@ -243,20 +255,17 @@ services:
         constraints:
           - "node.labels.$PATRONI_LABEL == storage"
 
-  local-socket:
+  gateway:
     image: alpine/socat
     extra_hosts:
       - "node.docker.host:host-gateway"
     command: "-dd TCP-L:5432,fork,bind=node.docker.host UNIX:/opt/swarm/sockets/patroni.sock"
-    volumes:
-      - /opt/swarm/sockets:/opt/swarm/sockets
-    networks:
-      - public
-    deploy:
-      mode: global
-      resources:
-        limits:
-          memory: 32M
+    <<: *socket
+  
+  localhost
+    image: alpine/socat
+    command: "-dd TCP-L:5432,fork,bind=localhost UNIX:/opt/swarm/sockets/patroni.sock"
+    <<: *socket
 
   proxy:
     image: haproxy

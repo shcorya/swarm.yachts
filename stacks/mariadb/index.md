@@ -167,8 +167,6 @@ services:
       PMA_PORT: 3306
       PMA_USER: root
       PMA_PASSWORD_FILE: /run/secrets/galera_root_pw
-      PMA_CONTROLHOST: mysql.host
-      PMA_CONTROLPORT: 3306
       PMA_PMADB: phpmyadmin
       PMA_CONTROLUSER: pma
       PMA_CONTROLPASS_FILE: /run/secrets/phpmyadmin_db_pw

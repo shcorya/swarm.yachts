@@ -99,11 +99,11 @@ EOL
 Three secrets are required to secure Garage. One is for RPC, another for metrics, and another for administration. The administration token will be needed to create new buckets; it needs to be retained outside of the swarm. Recomendation: use a password manager.
 
 ```bash
-openssl rand -hex 32 | docker secret create garage_rpc_secret -
+openssl rand -hex 32 | tee /dev/stderr | docker secret create garage_rpc_secret - > /dev/null
 ```
 
 ```bash
-openssl rand -base64 32 | docker secret create garage_metrics_token -
+openssl rand -base64 32 | tee /dev/stderr | docker secret create garage_metrics_token - > /dev/null
 ```
 
 ```bash
@@ -116,7 +116,7 @@ cat << EOL | docker stack deploy -c - garage
 version: '3.8'
 
 x-garage-image: &garage-image
-  image: dxflrs/garage:v1.0.0
+  image: dxflrs/garage:v1.0.1
 
 x-shared-confgs: &shared-configs
   configs:
@@ -153,11 +153,11 @@ services:
       internal:
       www:
         aliases:
-          - garage.discovery.host
+          - garage.discovery.internal
     deploy:
       labels:
         caddy: garage.corya.enterprises
-        caddy.reverse_proxy: garage.discovery.host:8500
+        caddy.reverse_proxy: garage.discovery.internal:8500
         caddy.basic_auth.admin: JDJhJDE0JGNiZFpXSEJTbTEueWZSaUJYbThHb3ViWVcwb0o1emVJNVZvWGk5VjYwREwuLmVmWUo0djZXCg==
       placement:
         constraints:
@@ -168,7 +168,7 @@ services:
     command: --init
     environment:
       GORDON_EXPECTED_NODE_COUNT: 7
-      GORDON_ADMIN_ENDPOINT: garage.host:3903
+      GORDON_ADMIN_ENDPOINT: garage.internal:3903
       GORDON_ADMIN_TOKEN_FILE: /run/secrets/garage_admin_token
       GORDON_CAPACITY_LABEL: enterprises.corya.garage.capacity
       GORDON_ZONE_LABEL: enterprises.corya.garage.zone
@@ -183,6 +183,9 @@ services:
       - source: garage_admin_token
         mode: 0600
     deploy:
+      placement:
+        constraints:
+          - "node.role == manager"
       mode: replicated-job
       replicas: 1
       restart_policy:
@@ -197,7 +200,7 @@ services:
     networks:
       internal:
         aliases:
-          - garage.host
+          - garage.internal
     environment:
       <<: *shared-env
       GARAGE_S3_BIND_ADDR: "0.0.0.0:3900"
@@ -220,7 +223,7 @@ services:
     networks:
       internal:
         aliases:
-          - garage.host
+          - garage.internal
     environment:
       <<: *shared-env
       GARAGE_S3_BIND_ADDR: /opt/swarm/sockets/s3.sock
@@ -275,5 +278,5 @@ EOL
 ```
 ## Creating Buckets
 ```bash
-docker run -it --rm --network garage -e GORDON_NEW_BUCKET_NAME=default -e GORDON_ADMIN_TOKEN=$GARAGE_ADMIN_TOKEN -e GORDON_ADMIN_ENDPOINT=garage.host:3903 coryaent/gordon --create-bucket
+docker run -it --rm --network garage -e GORDON_NEW_BUCKET_NAME=default -e GORDON_ADMIN_TOKEN=$GARAGE_ADMIN_TOKEN -e GORDON_ADMIN_ENDPOINT=garage.internal:3903 coryaent/gordon --create-bucket
 ```

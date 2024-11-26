@@ -34,7 +34,7 @@ Use this script to create a swarm config that will automatically initialize the 
 ```bash
 cat << EOL | docker config create mongo_init -
 #!/bin/bash
-mongosh mongodb://$(docker node ls -q --filter node.label=$MONGO_LABEL=true | head -n 1 | tr -d '\n').mongodb.host:27017 --eval "rs.initiate({_id: \"swarm\", version: 1, members: [{ _id: 0, host : \"$(docker node ls -q --filter node.label=$MONGO_LABEL=true | head -n 1 | tr -d '\n').mongodb.host:27017\" }, { _id: 1, host : \"$(docker node inspect ${MONGO_NODES[1]} | jq -r .[].ID | tr -d '\n').mongodb.host:27017\" }, { _id: 2, host : \"$(docker node inspect ${MONGO_NODES[2]} | jq -r .[].ID | tr -d '\n').mongodb.host:27017\" }]})"
+mongosh mongodb://$(docker node ls -q --filter node.label=$MONGO_LABEL=true | head -n 1 | tr -d '\n').mongodb.internal:27017 --eval "rs.initiate({_id: \"swarm\", version: 1, members: [{ _id: 0, host : \"$(docker node ls -q --filter node.label=$MONGO_LABEL=true | head -n 1 | tr -d '\n').mongodb.internal:27017\" }, { _id: 1, host : \"$(docker node inspect ${MONGO_NODES[1]} | jq -r .[].ID | tr -d '\n').mongodb.internal:27017\" }, { _id: 2, host : \"$(docker node inspect ${MONGO_NODES[2]} | jq -r .[].ID | tr -d '\n').mongodb.internal:27017\" }]})"
 EOL
 ```
 
@@ -58,7 +58,7 @@ services:
 
   db:
     image: mongo
-    hostname: "{{.Node.ID}}.mongodb.host"
+    hostname: "{{.Node.ID}}.mongodb.internal"
     command: >
       --nounixsocket
       --bind_ip_all
@@ -66,7 +66,7 @@ services:
     networks:
       mongodb:
         aliases:
-          - mongodb.host
+          - mongodb.internal
     volumes:
       - data:/data/db
     deploy:
@@ -87,7 +87,7 @@ services:
     volumes:
       - certs:/opt/certs/
     environment:
-      ME_CONFIG_MONGODB_URL: mongodb://mongodb.host:27017
+      ME_CONFIG_MONGODB_URL: mongodb://mongodb.internal:27017
       ME_CONFIG_BASICAUTH_USERNAME: mongo
       ME_CONFIG_BASICAUTH_PASSWORD_FILE: /run/secrets/mongo_express_pw
       ME_CONFIG_SITE_SSL_ENABLED: "true"

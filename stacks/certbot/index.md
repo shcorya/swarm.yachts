@@ -4,7 +4,7 @@
 [Certbot](https://certbot.eff.org/) is a program that handles the creation and renewal of Let's Encrypt certificates. Using this stack does not require any open ports; it relies on `DNS-01` challenges. Using the `DNS-01` ACME challenge has some advantages. One is that there is no need to open ports on any hosts. Another is that wildcard certificates can be obtained. These advantages will greatly ease the creation of secure swarm services.
 
 ## Custom Images
-The [coryaent/cypert](https://hub.docker.com/r/coryaent/cypert) image includes all the [Electronic Frontier Foundation DNS plugins](https://eff-certbot.readthedocs.io/en/stable/using.html#dns-plugins) plus [Gandi LiveDNS](https://github.com/obynio/certbot-plugin-gandi), [cPanel](https://github.com/badjware/certbot-dns-cpanel), and [DirectAdmin](https://github.com/cybercinch/certbot-dns-directadmin). Depending on the your DNS provider(s), it may be necessary to install one or more other plugins. The below Dockerfile demonstrates the installation of the aforementioned Gandi plugin. Additional plugins may be found on [GitHub](https://github.com/search?q=certbot%20plugin&type=repositories).
+The [coryaent/cypert](https://hub.docker.com/r/coryaent/cypert) image includes all the [Electronic Frontier Foundation DNS plugins](https://eff-certbot.readthedocs.io/en/stable/using.html#dns-plugins) plus [Gandi LiveDNS](https://github.com/obynio/certbot-plugin-gandi), [cPanel](https://github.com/badjware/certbot-dns-cpanel), [DirectAdmin](https://github.com/cybercinch/certbot-dns-directadmin), and [deSEC](https://pypi.org/project/certbot-dns-desec/). Depending on the your DNS provider(s), it may be necessary to install one or more other plugins. The below Dockerfile demonstrates the installation of the aforementioned Gandi plugin. Additional plugins may be found on [GitHub](https://github.com/search?q=certbot%20plugin&type=repositories).
 
 ```Dockerfile
 FROM python:alpine
@@ -15,6 +15,8 @@ ENTRYPOINT ["certbot"]
 
 CMD ["--help"]
 ```
+
+deSEC as a free and open-source DNS provider which can be used regardless of domain registrar. cPanel or DirectAdmin DNS can be used for existing domains with shared hosting or email set up.
 
 ## Configs and Secrets
 The EFF plugins and the community plugins require slightly different configurations. The Swarm configs will thus be slightly different for both types of plugin. Configs may be need to be adapted further for yet more plugins. The credential secrets will differ slightly from provider to provider in order to authenticate with each provider's API.
@@ -29,8 +31,8 @@ dns-{{ env "CERTBOT_DNS_PROVIDER" }}-credentials = {{ env "CERTBOT_CREDENTIAL_FI
 EOL
 ```
 
-### Gandi LiveDNS and DirectAdmin Config
-Use this command to create a config template for the Gandi and/or DirectAdmin plugin.
+### Gandi LiveDNS, DirectAdmin, and deSEC Config
+Use this command to create a config template for the Gandi, deSEC or DirectAdmin plugins.
 ```bash
 cat << EOL | docker config create --template-driver golang certbot_community_ini -
 email = {{ env "CERTBOT_EMAIL" }}
@@ -76,7 +78,7 @@ export CERTBOT_EMAIL=username@example.com
 ```
 
 ## Compose
-This stack deployment script will work for any of the EFF plugins, Gandi LiveDNS, DirectAdmin, or cPanel. It will need to be modified for other DNS providers.
+This stack deployment script will work for any of the EFF plugins, Gandi LiveDNS, deSEC, DirectAdmin, or cPanel. It will need to be modified for other DNS providers.
 ```bash
 #!/bin/bash
 run () {
