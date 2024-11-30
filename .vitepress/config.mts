@@ -98,7 +98,7 @@ export default defineConfig({
     },
 
     footer: {
-      message: 'A compilation of resources maintained by <a href=https://scorya.com>Stephen Corya</a> | Released under the CC0 1.0 Universal License | Created with <a href=https://vitepress.dev>VitePress</a>'
+      message: 'A compilation of resources maintained by <a href=https://scorya.com>Stephen Corya</a> | Created with <a href=https://vitepress.dev>VitePress</a>'
     },
 
     srcExclude: ['**/README.md']
