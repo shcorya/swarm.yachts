@@ -1,12 +1,13 @@
 name: Deploy Latest Release
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'v*'
 
 jobs:
-  default:
+  Default:
     runs-on: ubuntu-latest
     steps:
       -
