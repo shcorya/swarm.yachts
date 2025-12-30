@@ -18,8 +18,8 @@ services:
 
 networks:
   mgmt:
-    attachable: false
     name: mgmt
+    attachable: true
     driver: overlay
     driver_opts:
       encrypted: "true"
