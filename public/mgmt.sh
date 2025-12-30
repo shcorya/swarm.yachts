@@ -1,7 +1,5 @@
 #!/bin/sh
-cat << EOL | docker stack deploy -c - mgmt --detach=true
-version: "3.2"
-
+cat << EOF | docker stack deploy -c - mgmt --detach=true
 services:
   socket:
     image: alpine/socat
@@ -23,4 +21,4 @@ networks:
     driver: overlay
     driver_opts:
       encrypted: "true"
-EOL
+EOF
