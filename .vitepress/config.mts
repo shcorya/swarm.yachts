@@ -44,6 +44,8 @@ export default defineConfig({
         {
           text: 'Stacks',
           items: [
+            { text: 'Management', link: '/stacks/management/', items:[
+            ]},
             { text: 'cron', link: '/stacks/cron/', items:[
             ]},
             { text: 'System', link: '/stacks/system/', items:[
