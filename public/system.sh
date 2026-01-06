@@ -1,5 +1,5 @@
 #!/bin/sh
-cat << EOF | docker stack deploy -c - system
+cat << EOF | docker stack deploy -c - system --detach=true
 services:
   prune:
     image: docker
