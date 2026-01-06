@@ -12,7 +12,7 @@ services:
       - "LOG_JSON=false"
       - "DOCKER_HOST=tcp://socket:2375"
     networks:
-      - internal
+      - mgmt
     deploy:
       placement:
         constraints:
