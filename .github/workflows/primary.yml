@@ -3,8 +3,7 @@ name: Deploy Latest
 on:
   workflow_dispatch:
   push:
-    tags:
-      - 'v*'
+    branches: [ "master" ]
 
 jobs:
   Default:
