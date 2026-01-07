@@ -52,9 +52,6 @@ export default defineConfig({
             ]},
             { text: 'Certbot', link: '/stacks/certbot/', items:[
             ]},
-            { text: 'RedisRaft', link: '/stacks/redisraft/', items:[
-              // {text: "Compose", link: '/stacks/redisraft/#compose'}
-            ]},
             { text: 'MongoDB', link: '/stacks/mongodb/', items:[
               // {text: "Compose", link: '/stacks/redisraft/#compose'}
             ]},
