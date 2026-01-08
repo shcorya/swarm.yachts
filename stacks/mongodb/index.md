@@ -90,14 +90,14 @@ services:
     secrets:
       - mongo_express_pw
     volumes:
-      - certs:/opt/certs/
+      - certs:/mnt/certs/
     environment:
       ME_CONFIG_MONGODB_URL: mongodb://mongodb.internal:27017
       ME_CONFIG_BASICAUTH_USERNAME: mongo
       ME_CONFIG_BASICAUTH_PASSWORD_FILE: /run/secrets/mongo_express_pw
       ME_CONFIG_SITE_SSL_ENABLED: "true"
-      ME_CONFIG_SITE_SSL_CRT_PATH: /opt/certs/live/$SWARM_DOMAIN/cert.pem
-      ME_CONFIG_SITE_SSL_KEY_PATH: /opt/certs/live/$SWARM_DOMAIN/privkey.pem
+      ME_CONFIG_SITE_SSL_CRT_PATH: /mnt/certs/live/$SWARM_DOMAIN/cert.pem
+      ME_CONFIG_SITE_SSL_KEY_PATH: /mnt/certs/live/$SWARM_DOMAIN/privkey.pem
     deploy:
       placement:
         constraints:
