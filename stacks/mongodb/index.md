@@ -4,6 +4,11 @@
 MongoDB is a NoSQL database that is used to store JSON-like documents. With the use of a [Caddy plugin](https://github.com/root-sector/caddy-storage-mongodb), it can be used to store Caddy TLS data.
 
 ## Setup
+Set the variable for your swarm domain.
+```bash
+export SWARM_DOMAIN="example.com"
+```
+
 Chose a label to distinguish the MongoDB nodes.
 ```bash
 export MONGO_LABEL="yachts.swarm.mongodb"
