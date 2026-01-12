@@ -1,9 +1,3 @@
----
-prev:
-  text: 'Stacks Overview'
-  link: '/stacks/'
----
-
 *This stack is not suitable for production. It was previously used for the Caddy TLS storage backend.*
 
 # RedisRaft
@@ -51,23 +45,23 @@ loadmodule /redisraft.so
 
 # REDISRAFT OPTIONS
 raft.follower-proxy yes
-raft.addr {{.Node.ID}}.redisraft.host:6379
+raft.addr {{.Node.ID}}.redisraft.internal:6379
 EOL
 ```
 
 ## Compose
 ```bash
-cat << EOL | docker stack deploy -c - redisraft
+cat <<EOF | docker stack deploy -c - redisraft
 version: "3.8"
 
 services:
   server:
     image: redislabs/ng-redis-raft
-    hostname: "{{.Node.ID}}.redisraft.host"
+    hostname: "{{.Node.ID}}.redisraft.internal"
     networks:
       default:
         aliases:
-          - redisraft.host
+          - redisraft.internal
     configs:
       - redisraft_conf
     command: redis-server /redisraft_conf
@@ -98,7 +92,7 @@ networks:
 volumes:
   data:
     driver: local
-EOL
+EOF
 ```
 
 ## Clustering
@@ -114,9 +108,9 @@ do
   if [[ $i == 0 ]]
   then
     PRIMARY_ID=${REDISRAFT_NODE_IDS[i]}
-    docker run --rm --network redisraft redis redis-cli -h ${REDISRAFT_NODE_IDS[i]}.redisraft.host RAFT.CLUSTER INIT
+    docker run --rm --network redisraft redis redis-cli -h ${REDISRAFT_NODE_IDS[i]}.redisraft.internal RAFT.CLUSTER INIT
   else
-    docker run --rm --network redisraft redis redis-cli -h ${REDISRAFT_NODE_IDS[i]}.redisraft.host RAFT.CLUSTER JOIN $PRIMARY_ID.redisraft.host:6379
+    docker run --rm --network redisraft redis redis-cli -h ${REDISRAFT_NODE_IDS[i]}.redisraft.internal RAFT.CLUSTER JOIN $PRIMARY_ID.redisraft.internal:6379
   fi
 done
 ```
@@ -137,20 +131,20 @@ Zoowou7een6aey9eici6Vaiz9     worker-02   Ready     Active                      
 aocaingaish5eepoh4aeTh9eo     worker-03   Ready     Active                          25.0.3
 ```
 
-Next, initialize the cluster with the node ID's. Replace the service ID (`saeSh9chue6aoqu1ahv3Mah1t.redisraft.host`) with the output of the `docker node ls` command. For the first node, run:
+Next, initialize the cluster with the node ID's. Replace the service ID (`saeSh9chue6aoqu1ahv3Mah1t.redisraft.internal`) with the output of the `docker node ls` command. For the first node, run:
 ```bash
 docker run -it --rm --network redisraft redis \
-redis-cli -h saeSh9chue6aoqu1ahv3Mah1t.redisraft.host RAFT.CLUSTER INIT
+redis-cli -h saeSh9chue6aoqu1ahv3Mah1t.redisraft.internal RAFT.CLUSTER INIT
 
 ```
 Then, to set up the other nodes:
 ```bash
 docker run -it --rm --network redisraft redis \
-redis-cli -h Zoowou7een6aey9eici6Vaiz9.redisraft.host \
-RAFT.CLUSTER JOIN saeSh9chue6aoqu1ahv3Mah1t.redisraft.host:6379 &&\
+redis-cli -h Zoowou7een6aey9eici6Vaiz9.redisraft.internal \
+RAFT.CLUSTER JOIN saeSh9chue6aoqu1ahv3Mah1t.redisraft.internal:6379 &&\
 docker run -it --rm --network redisraft redis \
-redis-cli -h aocaingaish5eepoh4aeTh9eo.redisraft.host \
-RAFT.CLUSTER JOIN saeSh9chue6aoqu1ahv3Mah1t.redisraft.host:6379
+redis-cli -h aocaingaish5eepoh4aeTh9eo.redisraft.internal \
+RAFT.CLUSTER JOIN saeSh9chue6aoqu1ahv3Mah1t.redisraft.internal:6379
 ```
 
 To check that the cluster has been properly set up:
