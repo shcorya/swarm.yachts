@@ -29,7 +29,7 @@ done
 Create the swarm config template for the RedisRaft nodes. This allows passing the swarm node's ID to the Redis server. The ID, which is also set in the containers' hostname, is in turn advertised to the other servers.
 
 ```bash
-cat << EOL | docker config create --template-driver golang redisraft_conf -
+cat <<EOF | docker config create --template-driver golang redisraft_conf -
 # GENERAL OPTIONS
 dir /data
 bind 0.0.0.0
@@ -46,7 +46,7 @@ loadmodule /redisraft.so
 # REDISRAFT OPTIONS
 raft.follower-proxy yes
 raft.addr {{.Node.ID}}.redisraft.internal:6379
-EOL
+EOF
 ```
 
 ## Compose
