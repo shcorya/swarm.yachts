@@ -51,7 +51,7 @@ EOF
 
 ## Compose
 ```bash
-cat <<EOF | docker stack deploy -c - redisraft
+cat <<EOF | docker stack deploy --detach=true -c - redisraft
 version: "3.8"
 
 services:
