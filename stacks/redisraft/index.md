@@ -52,8 +52,6 @@ EOF
 ## Compose
 ```bash
 cat <<EOF | docker stack deploy --detach=true -c - redisraft
-version: "3.8"
-
 services:
   server:
     image: redislabs/ng-redis-raft
@@ -87,7 +85,8 @@ networks:
     attachable: true
     driver: overlay
     driver_opts:
-      encrypted: "true"
+      encrypted: "false"
+      com.docker.network.driver.mtu: "1450"
 
 volumes:
   data:

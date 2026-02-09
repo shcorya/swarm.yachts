@@ -50,7 +50,7 @@ version: '3.8'
 
 services:
   init:
-    image: mongo
+    image: mongo:7.0.28
     networks:
       - mongodb
     entrypoint: bash
@@ -62,7 +62,7 @@ services:
       mode: replicated-job
 
   db:
-    image: mongo
+    image: mongo:7.0.28
     hostname: "{{.Node.ID}}.mongodb.internal"
     command: >
       --nounixsocket
