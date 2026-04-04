@@ -39,7 +39,7 @@ Use this script to create a swarm config that will automatically initialize the 
 ```bash
 cat << EOL | docker config create mongo_init -
 #!/bin/bash
-mongosh mongodb://$(docker node ls -q --filter node.label=$MONGO_LABEL=true | head -n 1 | tr -d '\n').mongodb.internal:27017 --eval "rs.initiate({_id: \"swarm\", version: 1, members: [{ _id: 0, host : \"$(docker node ls -q --filter node.label=$MONGO_LABEL=true | head -n 1 | tr -d '\n').mongodb.internal:27017\" }, { _id: 1, host : \"$(docker node inspect ${MONGO_NODES[1]} | jq -r .[].ID | tr -d '\n').mongodb.internal:27017\" }, { _id: 2, host : \"$(docker node inspect ${MONGO_NODES[2]} | jq -r .[].ID | tr -d '\n').mongodb.internal:27017\" }]})"
+mongosh mongodb://$(docker node ls -q --filter node.label=$MONGO_LABEL=true | head -n 1 | tr -d '\n').mongodb.internal:27017 --eval "rs.initiate({_id: \"swarm\", version: 1, members: [{ _id: 0, host : \"$(docker node inspect ${MONGO_NODES[0]} | jq -r .[].ID | tr -d '\n').mongodb.internal:27017\" }, { _id: 1, host : \"$(docker node inspect ${MONGO_NODES[1]} | jq -r .[].ID | tr -d '\n').mongodb.internal:27017\" }, { _id: 2, host : \"$(docker node inspect ${MONGO_NODES[2]} | jq -r .[].ID | tr -d '\n').mongodb.internal:27017\" }]})"
 EOL
 ```
 
