@@ -9,8 +9,8 @@ services:
     networks:
       mgmt:
         aliases:
-          - mgmt.socket
-          - management.socket
+          - mgmt.internal
+          - management.internal
     deploy:
       mode: global
       placement:
