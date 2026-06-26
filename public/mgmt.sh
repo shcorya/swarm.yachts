@@ -7,7 +7,10 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - mgmt
+      mgmt:
+        aliases:
+          - mgmt.socket
+          - management.socket
     deploy:
       mode: global
       placement:
