@@ -16,12 +16,19 @@ services:
         condition: none
 
   updates:
-    image: ixdotai/cioban
-    volumes:
-      - '/var/run/docker.sock:/var/run/docker.sock'
+    image: registry.gitlab.com/egos-tech/cioban:3.0.7
+    environment:
+      DOCKER_HOST: tcp://mgmt.internal:2375
+      FILTER_SERVICES: label=yachts.swarm.auto-update=true
+    networks:
+      - mgmt
     deploy:
       placement:
         constraints:
-          - node.role == manager
+          - node.role == worker
+
+networks:
+  mgmt:
+    external: true
 
 EOF
