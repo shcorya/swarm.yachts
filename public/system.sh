@@ -15,7 +15,7 @@ services:
       restart_policy:
         condition: none
 
-  updates:
+  updater:
     image: registry.gitlab.com/egos-tech/cioban:3.0.7
     environment:
       DOCKER_HOST: tcp://mgmt.internal:2375
