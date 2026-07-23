@@ -182,5 +182,5 @@ aocaingaish5eepoh4aeTh9eo     worker-3.example.com    Ready     Active          
 In order to facility monitoring of services later, create a `metrics` overlay network that will be used by Prometheus to scrape specified endpoints. Do this on the general manager.
 
 ```bash
-docker network create --driver=overlay --opt encrypted --attachable --subnet=10.239.0.0/16  metrics
+docker network create --driver=overlay --opt encrypted --attachable --subnet=10.254.0.0/16  metrics
 ```
