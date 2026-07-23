@@ -50,7 +50,7 @@ Use the mongo-express UI to create a database `caddy`. Then create a collection 
 ## Configuration
 In order to configure CORS in the future, create a new Caddyfile config.
 ```bash
-cat << EOF | docker config create Caddyfile -
+cat << EOF | docker config create --template-driver golang Caddyfile -
 # from https://gist.github.com/ryanburnette/d13575c9ced201e73f8169d3a793c1a3
 (cors) {
         @cors_preflight{args.0} method OPTIONS

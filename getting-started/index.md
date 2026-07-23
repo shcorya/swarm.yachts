@@ -12,7 +12,7 @@ One should take care to read the additional documentation [Stacks page](/stacks/
 
 The Compose files are entered as simple bash commands so that they may be easily copied into the terminal and executed, without needing to save any files. In order to modify these Compose files, copy only the `yaml` portion into a new file, and then run `docker stack deploy -c /path/to/my/compose.yml my-stack-name`.
 
-It is hoped that this guide will serve as a succicient introduction to Docker Swarm, as well as a complete tutorial for the implementation of a robust, fault-tolerant, distributed system. Vertically scaling each VPS or dedicated server should be straightforward.
+It is hoped that this guide will serve as a sufficient introduction to Docker Swarm, as well as a complete tutorial for the implementation of a robust, fault-tolerant, distributed system. Vertically scaling each VPS or dedicated server should be straightforward.
 
 ## Basic Node Provisioning
 At least six servers (three managers and three workers) are required to deploy docker swarm effectively. Root access on each of the servers is required. The servers will cost from $100 to $400 per year depending on which provider you choose. RackNerd is recommended. One can get started with six nodes hosted by RackNerd about $100, which will be charged on an annual basis.

@@ -6,6 +6,8 @@ This guide would not be possible without [dockerswarm.rocks](https://dockerswarm
 
 An excellent collection of application-level compose files can be found [here](https://github.com/ethibox/awesome-stacks/tree/master/stacks). Many of these can be modified to run on our distributed setup.
 
+Another great resource is the [Docker Swarm Production Guide](https://thedecipherist.github.io/docker-swarm-guide/).
+
 ## Hosting Static Sites
 There are at least two ways to host static sites. One is using an S3 bucket from Garage, the other is creating a docker image that contains the site data. An advantage of using the docker image mothod is that a base domain can be used. For example, we can host `www.swarm.yachts` in S3, but we cannot host `swarm.yachts` using the same method.
 
