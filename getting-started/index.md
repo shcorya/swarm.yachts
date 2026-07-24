@@ -230,7 +230,7 @@ git config --global user.name "Your Name" && git config --global user.email "you
 
 Clone your new git repository into a writeable directory such as `/home/$U$ER`. You will be prompted to enter your Forgejo username and password. You should now have a directory `/home/$USER/stacks`.
 
-Create another repository with the same settings, with the exception of the name being `configs`. There is no need to re-run the `git config` commands again. Clone this repository into the same writeable directory, creating a directory `/home/$USER/configs`.
+Create another repository with the same settings, with the exception of the name being `configs`. There is no need to re-run the `git config` commands. Clone this repository into the same writeable directory, creating a directory `/home/$USER/configs`.
 
 ### Sync'ing with Git
 Synchronization will be handled by [git-sync](https://github.com/simonthum/git-sync). Install the script:
