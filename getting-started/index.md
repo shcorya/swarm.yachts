@@ -255,5 +255,5 @@ EOF
 In order to facilitate monitoring of services later, create a `metrics` overlay network that will be used by Prometheus to scrape specified endpoints. Do this on the general manager.
 
 ```bash
-docker network create --driver=overlay --opt encrypted --attachable --subnet=10.254.0.0/16  metrics
+docker network create --driver=overlay --attachable --subnet=10.254.0.0/16  metrics
 ```
