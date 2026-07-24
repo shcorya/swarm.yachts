@@ -4,7 +4,16 @@
 [Certbot](https://certbot.eff.org/) is a program that handles the creation and renewal of Let's Encrypt certificates. Using this stack does not require any open ports; it relies on `DNS-01` challenges. Using the `DNS-01` ACME challenge has some advantages. One is that there is no need to open ports on any hosts. Another is that wildcard certificates can be obtained. These advantages will greatly ease the creation of secure swarm services.
 
 ## Custom Images
-The [cypert](https://corya.io/enterprises/cypert) image includes all the [Electronic Frontier Foundation DNS plugins](https://eff-certbot.readthedocs.io/en/stable/using.html#dns-plugins) plus [DirectAdmin](https://github.com/cybercinch/certbot-dns-directadmin) and [deSEC](https://pypi.org/project/certbot-dns-desec/). deSEC as a free and open-source DNS provider which can be used regardless of domain registrar. DirectAdmin DNS can be used for existing domains with shared hosting or email set up. Depending on the your DNS provider(s), it may be necessary to install one or more other plugins. The below Dockerfile demonstrates the installation of the Gandi LiveDNS plugin. Additional plugins may be found on [GitHub](https://github.com/search?q=certbot%20plugin&type=repositories).
+The [cypert](https://corya.io/enterprises/cypert) image includes these plugins:
+
+- https://github.com/ctrlaltcoop/certbot-dns-hetzner
+- https://github.com/badjware/certbot-dns-cpanel
+- https://github.com/cybercinch/certbot-dns-directadmin
+- https://github.com/pan-net-security/certbot-dns-powerdns
+- https://github.com/desec-io/certbot-dns-desec
+- https://github.com/Simon-Spettmann/certbot-dns-powerdns-admin
+
+deSEC as a free and open-source DNS provider which can be used regardless of domain registrar. DirectAdmin DNS can be used for existing domains with shared hosting or email set up. Hetzner allows the creation of seemingly unlimeted DNS zones at no cost. PowerDNS and PowerDNS-Admin can be self-hosted. Depending on the your DNS provider(s), it may be necessary to install one or more other plugins. The below Dockerfile demonstrates the installation of the Gandi LiveDNS plugin. Additional plugins may be found on [GitHub](https://github.com/search?q=certbot%20plugin&type=repositories).
 
 ```Dockerfile
 FROM python:alpine
