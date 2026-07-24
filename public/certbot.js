@@ -1,174 +1,89 @@
-"use strict";
+import { Socket } from "jsr:@typescriptplayground/socket";
+import { prompt, promptSecret } from "jsr:@deno-cli-tools/prompts";
+import { userInfo } from "node:os";
 
-let proceed, credentials, apiResponse, apiResponseData, initNode, psk, schedule;
+let dockSock = new Socket('/var/run/docker.sock');
 
-if (!process.env.DOCKER_ENDPOINT) {
-  console.error("Environment variable DOCKER_ENDPOINT must be set.");
-  process.exit(1);
-}
+let credentials, process, status;
 
-// check and marshall docker endpoint
-const validDockerEndpoint = URL.canParse(process.env.DOCKER_ENDPOINT);
-console.debug(validDockerEndpoint);
-if (!validDockerEndpoint) {
-  console.error(`DOCKER_ENDPOINT is not valid. Only HTTP is supported e.g. http://localhost:2375`);
-  process.exit(1);
-}
-
-const provider = prompt(`Enter your DNS provider (desec, directadmin, hetzner, powerdns, or powerdns-admin):`);
-
+const provider = await prompt("Enter your DNS provider (desec, directadmin, hetzner, powerdns, or powerdns-admin): ");
+// get credentials based on provider
 switch (provider) {
 
   case "desec":
-    const desecToken = prompt("Enter your deSEC token:");
+    const desecToken = await promptSecret("Enter your deSEC token: ");
     credentials =
       `dns_desec_token = ${desecToken}`;
     break;
 
   case "directadmin":
-    const directAdminUrl = prompt("Enter your DirectAdmin URL:");
-    const directAdminUsername = prompt("Enter your DirectAdmin username:");
-    const directAdminPassword = prompt("Enter your DirectAdmin password:");
-    credentials = 
+    const directAdminUrl = await prompt("Enter your DirectAdmin URL: ");
+    const directAdminUsername = await prompt("Enter your DirectAdmin username: ");
+    const directAdminPassword = await promptSecret("Enter your DirectAdmin password: ");
+    credentials =
       `dns_directadmin_url = ${directAdminUrl}` + '\n' +
       `dns_directadmin_username = ${directAdminUsername}` + '\n' +
-      `dns_directadmin_password = ${directAdminPassword}`; 
+      `dns_directadmin_password = ${directAdminPassword}`;
     break;
 
   case "hetzner":
-    const hetzerApiToken = prompt("Enter your Hetzner API token:");
-    credentials = 
+    const hetzerApiToken = await promptSecret("Enter your Hetzner API token: ");
+    credentials =
       `dns_hetzner_api_token = ${hetzerApiToken}`;
     break;
 
   case "powerdns":
-    const powerdnsAdminUrl = prompt("Enter your PowerDNS URL:");
-    const powerdnsApiKey = prompt("Enter your PowerDNS API key:");
+    const powerdnsAdminUrl = await prompt("Enter your PowerDNS URL: ");
+    const powerdnsApiKey = await promptSecret("Enter your PowerDNS API key: ");
     credentials =
       `dns_powerdns_api_url = ${powerdnsAdminUrl}` + '\n' +
       `dns_powerdns_api_key = ${powerdnsApiKey}`;
     break;
 
   case "powerdns-admin":
-    const pdnsAdminUrl = prompt("Enter your PowerDNS-Admin URL:");
-    const pdnsAdminKey = prompt("Enter your PowerDNS-Admin API key");
+    const pdnsAdminUrl = await prompt("Enter your PowerDNS-Admin URL: ");
+    const pdnsAdminKey = await promptSecret("Enter your PowerDNS-Admin API key: ");
     credentials =
       `dns_powerdns_admin_api_url = ${pdnsAdminUrl}` + '\n' +
       `dns_powerdns_admin_api_key = ${pdnsAdminKey}`;
     break;
 
     default:
-      console.error(`Provider "${provider}" is not supported.`); 
-      proceed = confirm("Do you want to continue?");
-      if (!proceed) process.exit(1);
+      console.error(`Provider "${provider}" is not supported.`);
+      Deno.exit(1);
 
 }
 
-const domains = prompt("Enter a comma-seperated array of domains to certify (wildcards are allowed): ");
+// Create a config
+await createSwarmObject('config', `certbot_credentials_${provider}`, credentials);
+
+// get the list of domains
+const domains = await prompt("Enter a space-seperated array of domains to certify (wildcards are allowed): ");
 if (!domains) {
-  console.error("A list of domains must be provided.");
-  process.exit(1);
+  console.error("One or more domains must be provided.");
+  Deno.exit(1);
 }
 
-const email = prompt("Enter your email address (optional):");
+// get the optional email address
+const email = prompt("Enter your email address (optional): ");
 
-schedule = prompt("Enter a cron renewal time including seconds (one will be automatically generated if left blank): ");
-if (!schedule){
-  // generate a random, daily cron time
-  schedule = `${Math.floor(Math.random() * 60)} ${Math.floor(Math.random() * 60)} ${Math.floor(Math.random() * 24)} * * *`
-}
+// get the cron schedule
+const schedule = await prompt("Enter a cron renewal time including seconds (one will be automatically generated if left blank): ") ||
+  `${Math.floor(Math.random() * 60)} ${Math.floor(Math.random() * 60)} ${Math.floor(Math.random() * 24)} * * *`;
 
-// get a psk
-psk = prompt("Enter a random, 32-character string for the snchronization process pre-shared key \
-  (one will be randomly generated in not entered here): ");
-if (!psk) {
-  // generate a random string 
-  const length = 32;
-  psk = Math.random().toString(36).substring(2, length + 2);
-}
-console.log("Creating secret pre-shared key in the swarm ...");
-apiResponse = await fetch(process.env.DOCKER_ENDPOINT.replace(/\/+$/, "") + '/secrets/create', {
-  method: "POST",
-  body: JSON.stringify({
-    Name: "certbot_favre_psk",
-    Data: btoa(psk)
-  }),
-});
-apiResponseData = await apiResponse.json();
-if (apiResponse.status === 200) {
-  console.log(apiResponseData.Id);
-} else {
-  console.error(apiResponseData.message);
-  process.exit(1);
-}
+// generate a secret for favre sync
+const FAVRE_PSK_LENGTH = 32;
+const psk = Math.random().toString(36).substring(2, FAVRE_PSK_LENGTH + 2);
+await createSwarmObject('secret', 'certbot_favre_psk', psk);
 
-// certbot.ini => docker config
-console.log(`Creating config certbot_ini ...`);
-// configuration in base64
-const ini_template = `
+// create the ini config
+// create config for certbot.ini
+const certbot_ini_template = `
 email = {{ env "CERTBOT_EMAIL" }}
 authenticator = dns-{{ env "CERTBOT_DNS_PROVIDER" }}
 dns-{{ env "CERTBOT_DNS_PROVIDER" }}-credentials = {{ env "CERTBOT_CREDENTIAL_FILE" }}
-{{ env "CERTBOT_DOMAINS" }}
 `;
-apiResponse = await fetch(process.env.DOCKER_ENDPOINT.replace(/\/+$/, "") + '/configs/create', {
-  method: "POST",
-  body: JSON.stringify({
-    Name: `certbot_ini`,
-    Data: btoa(ini_template),
-    Templating: {
-      Name: 'golang'
-    }
-  }),
-});
-
-apiResponseData = await apiResponse.json();
-if (apiResponse.status === 200) {
-  console.log(apiResponseData.Id);
-} else {
-  console.error(apiResponseData.message);
-  process.exit(1);
-}
-
-// credentials => docker secret
-console.log(`Creating secret certbot_${provider}_credentials ...`);
-apiResponse = await fetch(process.env.DOCKER_ENDPOINT.replace(/\/+$/, "") + '/secrets/create', {
-  method: "POST",
-  body: JSON.stringify({
-    Name: `certbot_${provider}_credentials`,
-    Data: btoa(credentials)
-  }),
-});
-apiResponseData = await apiResponse.json();
-if (apiResponse.status === 200) {
-  console.log(apiResponseData.Id);
-} else {
-  console.error(apiResponseData.message);
-  process.exit(1);
-}
-
-// find the first online worker, because the init job likes to run more than once
-console.log('Finding an online worker node ...');
-let url = new URL(process.env.DOCKER_ENDPOINT.replace(/\/+$/, "") + '/nodes');
-url.searchParams.append('filters', JSON.stringify( { role: ['worker'] } ));
-apiResponse = await fetch(url);
-apiResponseData = await apiResponse.json();
-if (apiResponse.status === 200) {
-  // find init node
-  initNode = apiResponseData.find(node => {
-    let isActive = node.Spec.Availability === "active";
-    let isReady = node.Status.State === "ready";
-    return isActive && isReady;
-  });
-} else {
-  console.error(apiResponseData.message);
-  process.exit(1);
-}
-if (!initNode) {
-  console.error("Could not find a worker node that is both active and ready.")
-  process.exit(1);
-}
-console.log(initNode.ID);
+await createSwarmObject('config', 'certbot_ini', certbot_ini_template, 'golang');
 
 const chmodScript = `
 #!/bin/sh
@@ -178,6 +93,7 @@ chmod -R 0755 /etc/letsencrypt/live
 chmod 0755 /etc/letsencrypt/archive
 chmod -R 0755 /etc/letsencrypt/archive
 `;
+await createSwarmObject('config', `certbot_fix_permissions`, chmodScript);
 
 const mustacheTemplate = `
 nossl * *;
@@ -210,45 +126,65 @@ group swarm {
     {{#backupGenerations}}backup-generations {{.}};{{/backupGenerations}}
 }
 `;
+await createSwarmObject('config', `Mustache_certbot`, mustacheTemplate);
 
-const composeFile = `
+// get the initialization node because the init likes to run more than once if it's not explicitly specified
+const response = await dockSock.request('/nodes', {
+  method: "GET",
+  headers: {
+    "Content-Type": "application/json"
+  }
+});
+const nodes = await response.json();
+// just get the first worker that is active and ready
+const initNode = nodes.filter(node => 
+  node.Spec?.Role === 'worker' &&
+  node.Spec?.Availability === 'active' &&
+  node.Status?.State === 'ready'
+)[0];
+// bail if there's no eligile workers
+if (!initNode) {
+  console.error("no active, ready worker nodes found in the swarm");
+  Deno.exit(1);
+}
+
+const composeFileTemplate = `
 x-certbot-common: &certbot-common
   image: corya.io/enterprises/cypert:master
-  configs:                                           
+  configs:
     - source: certbot_ini
-      target: /etc/letsencrypt/cli.ini     
+      target: /etc/letsencrypt/cli.ini
       mode: 0400
-    - source: certbot_fix_permissions                                                                                                                                                                                    
-      target: /etc/letsencrypt/renewal-hooks/deploy/certbot_fix_permissions.sh                                                                                                                                                                
+    - source: certbot_fix_permissions
+      target: /etc/letsencrypt/renewal-hooks/deploy/certbot_fix_permissions.sh
       mode: 0555
-  secrets:                                    
+  secrets:
     - source: certbot_credentials_${provider}
-      mode: 0400                            
-  volumes:                                            
+      mode: 0400
+  volumes:
     - certs:/etc/letsencrypt/
-                                                           
+
 x-common-env: &common-env
-  ${email ? `CERTBOT_EMAIL: ${email}` : ''}
+  CERTBOT_EMAIL: ${email ? email : 'null@swarm.invalid'}
   CERTBOT_DNS_PROVIDER: ${provider}
   CERTBOT_CREDENTIAL_FILE: /run/secrets/certbot_credentials_${provider}
 
 services:                                                                                                                                                                                                                   22:35:00 [41/1858]
-  init:     
-    <<: *certbot-common            
-    command: certonly --agree-tos -n
+  init_${provider}:
+    <<: *certbot-common
+    command: certonly --agree-tos -n ${domains.split(' ').map(domain => `-d ${domain}`).toString().replaceAll(',', ' ')}
     environment:
       <<: *common-env
-      CERTBOT_DOMAINS: "domains = ${domains}"
-    deploy:     
+    deploy:
       mode: replicated-job
-      placement:                 
+      placement:
         constraints:
           - "node.id == ${initNode.ID}"
-                                                        
-  renew:          
-    <<: *certbot-common     
+
+  renew:
+    <<: *certbot-common
     command: renew --agree-tos -n
-    environment:     
+    environment:
       <<: *common-env
     deploy:
       labels:
@@ -260,13 +196,13 @@ services:                                                                       
       placement:
         constraints:
           - "node.role == worker"
-                                                           
-  sync:         
+
+  sync:
     image: coryaent/favre:main
     hostname: '{{.Task.ID}}'
-    secrets:         
+    secrets:
       - certbot_favre_psk
-    environment:                 
+    environment:
       DEBUG: "1"
       CSYNC2_PSK_FILE: /run/secrets/certbot_favre_psk
       CSYNC2_INCLUDE: /sync
@@ -329,3 +265,79 @@ volumes:
     driver: local
     name: certs
 `;
+
+// run git-sync
+const gitSyncCheck = new Deno.Command("git-sync", {
+  args: ["-n", "-s", "check"],
+  stdin: "piped",
+  cwd: `${userInfo().homedir}/stacks`
+});
+
+process = gitSyncCheck.spawn();
+
+// Await the status promise to get the status object
+status = await process.status;
+
+// bail if we can't git-sync
+if (status.code) process.exit(status.code);
+
+// write the file to the stacks folder
+await Deno.writeTextFile(`${userInfo().homedir}/stacks/certbot.yml`, composeFileTemplate);
+
+const gitSyncExec = new Deno.Command("git-sync", {
+  args: ["-n", "-s"],
+  stdin: "piped",
+  cwd: `${userInfo().homedir}/stacks`
+});
+
+process = gitSyncExec.spawn();
+
+// dirty exit
+status = await process.status;
+if (status.code) process.exit(status.code);
+
+// ================================================================================
+// convenience function
+async function createSwarmObject(type, name, data, templateDriver) {
+  // Validate object type
+  if (type !== 'secret' && type !== 'config') {
+    console.error(`Invalid type "${type}". Must be either "secret" or "config".`);
+    Deno.exit(1);
+  }
+
+  // Docker API endpoints: /secrets/create vs /configs/create
+  const endpoint = `/${type}s/create`;
+
+  const payload = {
+    "Name": name,
+    "Data": btoa(data)
+  };
+
+  // Templating is supported on both Swarm configs and secrets
+  if (templateDriver) {
+    payload["Templating"] = {
+      "Name": templateDriver
+    };
+  }
+
+  const response = await dockSock.request(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const result = await response.json();
+
+  if (response.status === 201) {
+    console.log(result.ID);
+    return result.ID;
+  } else if (response.status === 409) {
+    console.log(`${type} ${name} already exists`);
+    if (!confirm('proceed anyway?')) Deno.exit(0);
+  } else {
+    console.error(result.message);
+    Deno.exit(1);
+  }
+}
