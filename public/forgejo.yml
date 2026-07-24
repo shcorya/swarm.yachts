@@ -1,0 +1,38 @@
+services:
+  proxy:
+    image: lucaslorentz/caddy-docker-proxy:2.13.1-alpine
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      - CADDY_INGRESS_NETWORKS=web
+    networks:
+      - web
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./caddy:/data
+    restart: unless-stopped
+    container_name: caddy
+
+  server:
+    image: codeberg.org/forgejo/forgejo:16.0.1
+    container_name: forgejo
+    environment:
+      - USER_UID=150
+      - USER_GID=150
+    restart: unless-stopped
+    networks:
+      - web
+    volumes:
+      - ./forgejo:/data
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - '55522:22'
+    labels:
+      caddy: placeholder.invalid
+      caddy.reverse_proxy: "{{upstreams 3000}}"
+
+networks:
+  web:
+    driver: bridge
+    name: web

@@ -44,7 +44,7 @@ worker-3.example.com   300  IN      A       6.7.8.9
 More information about setting DNS records is available on the [Caddy Stack page](/stacks/caddy/#dns).
 
 ## Node Setup
-One manager will sort of be a "general manager". On this node, create a username and add it to the groups `sudo` and `docker`. Also, install `pwgen`, `randmac`, `jq` and `parallel-ssh` from your distro's package registry.
+One manager will sort of be a "general manager". On this node, create a username and add it to the groups `sudo` and `docker`. Also, install `pwgen`, `randmac`, `jq`, `git` and `parallel-ssh` from your distro's package registry.
 
 ### Install Deno
 Running the scripts in this guide requires `deno`. to be installed. On your general manager, install `deno` globally:
@@ -59,13 +59,13 @@ Download `n2n` for your distribution from the GitHub [releases](https://github.c
 
 ```
 # /etc/n2n/supernode.conf
-# listen on this fixed local UDP port
+# listen on this fixed port (edges will need to point to this port)
 -p=49173
 # community list path
 -c=/etc/n2n/communities.list
 # IP address range (any single /23 subnet from the 192.168.0.0 – 192.168.255.255 range)
--a=192.168.2.0-192.168.3.0/23
-# federation name
+-a=192.168.2.0-192.168.2.0/23
+# federation name (something random, needs to be the same on each supernode)
 -F=aijei1huechieY1o
 # other supernodes (managers) for federation
 -l=2.3.4.5:52116
@@ -76,14 +76,14 @@ Download `n2n` for your distribution from the GitHub [releases](https://github.c
 # managers' /etc/n2n/edge.conf (managers need a static IP assignment)
 # intherface name
 -d=n2n0
-# community name (needs to exist in /etc/n2n/communities.list)
+# community name (random, needs to exist in /etc/n2n/communities.list on the supernodes)
 -c=Ohngai5oth2ooca1Aith
-# pre-shared key (needs to be the same on each node)
+# pre-shared key (random, needs to be the same on each node)
 -k=thahthee3nie3gieChah
 # MAC address (uniqe per host, can be generated with `randmac -Uu`)
 -m=4E:1F:62:61:4E:DB
 # interface address
--a=192.168.2.1/23
+-a=192.168.2.1/23 (change this to another static address for the other managers e.g. 192.168.2.2/23 for manager-2)
 # local udp port (anything will do, can be randomly generated with `shuf -i 49152-65535 -n 1`)
 -p=49590
 # supernode public IP list
@@ -160,11 +160,9 @@ To add a worker to this swarm, run the following command:
     docker swarm join --token SWMTKN-1-3pu6hszjas19xyp7ghgosyx9k8atbfcr8p2is99znpy26u2lkl-1awxwuwd3z9j1z3puu7rcgdbx 172.17.0.2:2377
 
 To add a manager to this swarm, run `docker swarm join-token manager` and follow the instructions.
-
-The output will similarly output a token to join the swarm. Run the `docker swarm join` command with the manager token on each of the other managers.
+```
 
 More information about [initializing a swarm](https://docs.docker.com/reference/cli/docker/swarm/init/) and [joining nodes](https://docs.docker.com/reference/cli/docker/swarm/join/) can be found in the official documentation.
-```
 
 ## Listing Nodes
 With three managers and three workers, running `docker node ls` should output something resembling the following.
@@ -178,8 +176,83 @@ Zoowou7een6aey9eici6Vaiz9     worker-2.example.com    Ready     Active          
 aocaingaish5eepoh4aeTh9eo     worker-3.example.com    Ready     Active                          25.0.3
 ```
 
+## Version Control
+This guide automatically generates `docker-compose.yml` stack files. This makes it easier to get up and running; however, it is prudent to keep the files saved to the disk. Even better, the stack files can be stored in a git repository and automatically updated should they be changed. This way, stack files can be recovered in the event of total failure of the general manager, and known working states can be restored.
+
+### Installing Forgejo
+Provision another server that will not be part of the swarm. A low end VPS with ~1 GB of RAM should suffice. Create an alias record:
+```
+git.example.com. 300  IN      A       7.8.9.10
+```
+
+Log into this server as `root`, and install Docker:
+```sh
+curl -s https://get.docker.com | sh
+```
+
+Create a directory for the `docker-compose.yml` file as well as data directories for the Forejo server and its proxy:
+```sh
+mkdir -p /opt/forgejo/caddy /opt/forgejo/forgejo && chown -R 150:150 /opt/forgejo/forgejo
+```
+
+Download the `docker-compose.yml` file:
+```sh
+wget -O /opt/forgejo/docker-compose.yml https://swarm.yachts/forgejo.yml
+```
+
+Modify the `docker-compose.yml` file, taking care to set `FORGEJO_DOMAIN` to the proper value for your domain (e.g. `git.example.com`):
+```sh
+FORGEJO_DOMAIN=git.example.com && sed -i "s/placeholder\.invalid/$FORGEJO_DOMAIN/g" /opt/forgejo/docker-compose.yml
+```
+
+Launch Forgejo and its reverse proxy:
+```sh
+cd /opt/forgejo && docker compose up -d
+```
+
+Point your web browser of choice to [git.example.com](https://git.example.com) and finish the initial setup with the web UI.
+
+### Repository Setup
+
+Login to the web UI with your newly created username and password, and create a new repository called `stacks`. This repository can be created with your user as its owner or with an organization as its owner. Take care to check the `Visibility` box and make the repository private. Also take note of the `Default Branch`; it is probably `main`. Check the `Initialize Repository` box. We want a README.md in the repository. Licenses and `.gitignore` files are not important here.
+
+Return to the general manager, and login as your non-root user. Instruct git to save your Forgejo username and password to the disk:
+
+```sh
+git config --global credential.helper store
+```
+
+Also, set your name and email:
+
+```sh
+git config --global user.name "Your Name" && git config --global user.email "your.email@example.com"   
+```
+
+Clone your new git repository into a writeable directory such as `/home/$U$ER`. You will be prompted to enter your Forgejo username and password. You should now have a directory `/home/$USER/stacks`.
+
+Create another repository with the same settings, with the exception of the name being `configs`. There is no need to re-run the `git config` commands again. Clone this repository into the same writeable directory, creating a directory `/home/$USER/configs`.
+
+### Sync'ing with Git
+Synchronization will be handled by [git-sync](https://github.com/simonthum/git-sync). Install the script:
+```sh
+sudo wget -P /usr/local/bin https://raw.githubusercontent.com/simonthum/git-sync/refs/heads/master/git-sync &&\
+sudo chmod +x /usr/local/bin/git-sync
+```
+
+Create a simple stack in the new `stacks` repository and check to see that synchronization is working correctly:
+```sh
+WORKDIR=$(pwd) && cd /home/$USER/stacks && git-sync -n -s check && { cat << 'EOF' > ./test.yml
+services:
+  whoami:
+    image: traefik/whoami
+    ports:
+      - "80:80"
+EOF
+} && git-sync -n -s && cd $WORKDIR
+```
+
 ## Create a Network for Metrics
-In order to facility monitoring of services later, create a `metrics` overlay network that will be used by Prometheus to scrape specified endpoints. Do this on the general manager.
+In order to facilitate monitoring of services later, create a `metrics` overlay network that will be used by Prometheus to scrape specified endpoints. Do this on the general manager.
 
 ```bash
 docker network create --driver=overlay --opt encrypted --attachable --subnet=10.254.0.0/16  metrics
