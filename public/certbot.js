@@ -65,7 +65,7 @@ if (!domains) {
 }
 
 // get the optional email address
-const email = prompt("Enter your email address (optional): ");
+const email = await prompt("Enter your email address (optional): ");
 
 // get the cron schedule
 const schedule = await prompt("Enter a cron renewal time including seconds (one will be automatically generated if left blank): ") ||
