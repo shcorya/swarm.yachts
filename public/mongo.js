@@ -87,6 +87,62 @@ ${labeledNodes
 )"
 `;
 
+const haproxyTemplate = `
+global
+        hard-stop-after 30s
+        log stdout format raw local0 err
+                                                           
+defaults            
+        retries 4  
+        option redispatch                              
+        timeout client 30s
+        timeout server 30s
+        timeout connect 4s
+
+frontend prometheus
+        bind :8405
+        mode http
+        http-request use-service prometheus-exporter
+        no log
+
+listen stats
+        mode http
+        bind *:7000 ssl crt {{ env "HAPROXY_CERT_FILE" }}
+        stats enable
+        stats uri /
+        stats auth mongo:{{ secret "mongo_status_pw" }}
+        stats refresh 30s
+
+frontend mongo_primary
+        bind *:27017
+        bind /run/mongo/haproxy.sock
+        mode tcp
+        default_backend mongo_stack
+
+backend mongo_stack
+        option tcp-check
+        option log-health-checks
+        tcp-check connect port 27017
+        tcp-check send-binary 3a000000 # Message Length (58)
+        tcp-check send-binary EEEEEEEE # Request ID (random value)
+        tcp-check send-binary 00000000 # Response To (nothing)
+        tcp-check send-binary d4070000 # OpCode (Query)
+        tcp-check send-binary 00000000 # Query Flags
+        tcp-check send-binary 61646d696e2e # fullCollectionName (admin.$cmd)
+        tcp-check send-binary 24636d6400 # continued
+        tcp-check send-binary 00000000 # NumToSkip
+        tcp-check send-binary FFFFFFFF # NumToReturn
+        # Start of Document
+        tcp-check send-binary 13000000 # Document Length (19)
+        tcp-check send-binary 10 # Type (Int32)
+        tcp-check send-binary 69736d617374657200 # ismaster:
+        tcp-check send-binary 01000000 # Value : 1
+        tcp-check send-binary 00 # Term
+        tcp-check expect binary 69736d61737465720001 #ismaster True
+        default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
+${labeledNodes.map(node => `        server ${node.Description.Hostname} ${node.ID}.mongodb.internal:27017 check inter 3s fall 3 rise 2`)}
+`;
+
 const composeTemplate = `
 services:
   init:
@@ -211,5 +267,4 @@ volumes:
     driver: local
   certs:
     external: true
-
 `;
