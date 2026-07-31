@@ -6,7 +6,7 @@ let dockSock = new Socket('/var/run/docker.sock');
 
 let credentials, process, status;
 
-const provider = await prompt("Enter your DNS provider (desec, directadmin, hetzner, powerdns, or powerdns-admin): ");
+const provider = await prompt("Enter your DNS provider (desec, directadmin, hetzner, powerdns or powerdns-admin): ");
 // get credentials based on provider
 switch (provider) {
 
@@ -334,8 +334,8 @@ async function createSwarmObject(type, name, data, templateDriver) {
     console.log(result.ID);
     return result.ID;
   } else if (response.status === 409) {
-    console.log(`${type} ${name} already exists`);
-    if (!confirm('proceed anyway?')) Deno.exit(0);
+    console.log(`${type.charAt(0).toUpperCase() + type.slice(1)} ${name} already exists`);
+    if (!confirm('Proceed anyway?')) Deno.exit(0);
   } else {
     console.error(result.message);
     Deno.exit(1);
