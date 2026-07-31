@@ -35,11 +35,11 @@ Install Linux on each of the VPS's. This guide assumes Debian or Ubuntu has been
 Create a DNS A record for each of your new machines. Then, set another A record which is the same domain name pointing to the three worker nodes. For example, if your manager IP are `1.2.3.4`, `2.3.4.5`, and `3.4.5.6`, create the following A records:
 ```
 manager-1.example.com. 300  IN      A       1.2.3.4
-manager-2.example.com  300  IN      A       2.3.4.5
-manager-3.example.com  300  IN      A       3.4.5.6
+manager-2.example.com. 300  IN      A       2.3.4.5
+manager-3.example.com. 300  IN      A       3.4.5.6
 worker-1.example.com.  300  IN      A       4.5.6.7
 worker-2.example.com.  300  IN      A       5.6.7.8
-worker-3.example.com   300  IN      A       6.7.8.9
+worker-3.example.com.  300  IN      A       6.7.8.9
 ```
 More information about setting DNS records is available on the [Caddy Stack page](/stacks/caddy/#dns).
 
