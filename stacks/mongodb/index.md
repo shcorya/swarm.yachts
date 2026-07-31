@@ -113,7 +113,7 @@ networks:
     ipam:
       driver: default
       config:
-        - subnet: "10.144.0.0/16"
+        - subnet: "10.255.4.0/23"
 
 configs:
   mongo_init:
