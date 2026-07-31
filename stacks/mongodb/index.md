@@ -109,7 +109,7 @@ networks:
     attachable: true
     driver: overlay
     driver_opts:
-      encrypted: "true"
+      com.docker.network.driver.mtu: "1200"
     ipam:
       driver: default
       config:
