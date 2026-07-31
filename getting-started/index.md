@@ -257,3 +257,18 @@ In order to facilitate monitoring of services later, create a `metrics` overlay 
 ```bash
 docker network create --driver=overlay --attachable --subnet=10.254.0.0/16  metrics
 ```
+
+## Generate a self-signed HAProxy Certificate
+HAProxy will be used for a variety of stacks in this guide. For the sake of ease, the HAProxy status pages will use a self-signed certificate; a potential attacker would gain little by unauthorized access of one of these status pages.
+
+```bash
+openssl req -new -newkey rsa:4096 -days 3650 -nodes -x509 -keyout /tmp/server.key -out /tmp/server.crt
+```
+
+```bash
+cat /tmp/server.crt /tmp/server.key | docker secret create haproxy_ssl -
+```
+
+```bash
+rm /tmp/server.key /tmp/server.crt
+```
