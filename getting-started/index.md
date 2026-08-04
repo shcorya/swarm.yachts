@@ -260,15 +260,22 @@ docker network create --driver=overlay --attachable --subnet=10.254.0.0/16  metr
 
 ## Generate a self-signed HAProxy Certificate
 HAProxy will be used for a variety of stacks in this guide. For the sake of ease, the HAProxy status pages will use a self-signed certificate; a potential attacker would gain little by unauthorized access of one of these status pages.
-
+Generate the keypair:
 ```bash
 openssl req -new -newkey rsa:4096 -days 3650 -nodes -x509 -keyout /tmp/server.key -out /tmp/server.crt
 ```
 
+Check the new certificate's SHA256 fingerprint. This can be used to validate your certificate's authenticity from the browser. Make a note of the output:
+```bash
+openssl x509 -in /tmp/server.crt -noout -fingerprint -sha256
+```
+
+Create a docker secret:
 ```bash
 cat /tmp/server.crt /tmp/server.key | docker secret create haproxy_ssl -
 ```
 
+Cleanup:
 ```bash
 rm /tmp/server.key /tmp/server.crt
 ```
